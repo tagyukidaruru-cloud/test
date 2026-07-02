@@ -16,7 +16,15 @@
       "Bash(chmod +x ~/bin/gh)",
       "Bash(~/bin/gh --version)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(mkdir -p /Users/uuto/Downloads/test/.claude/scripts && ls /Users/uuto/Downloads/test/.claude)",
+      "Bash(ls ~/Library/LaunchAgents/ 2>&1 | grep -i test)",
+      "Bash(launchctl unload *)",
+      "Bash(launchctl load *)",
+      "Bash(launchctl list *)",
+      "Bash(echo \"test change $\\(date\\)\")",
+      "Bash(/bin/zsh /Users/uuto/Downloads/test/.claude/scripts/autocommit.sh)"
     ]
   }
 }
