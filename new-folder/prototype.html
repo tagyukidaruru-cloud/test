@@ -1,0 +1,2710 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f4f0e9">
+<title>STYLE ARCHIVE — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   デザイントークン
+   ================================================================ */
+:root {
+  --bg: #f4f0e9;
+  --surface: #ffffff;
+  --surface-mute: #ebe5db;
+  --ink: #1e1815;
+  --ink-2: #4a413b;
+  --ink-3: #8a7f77;
+  --ink-4: #b8ada4;
+  --line: #e2d9cc;
+  --accent: #6b3838;
+  --accent-2: #a67c5b;
+  --good: #4a7c59;
+  --bad: #a04a3f;
+
+  --r-card: 14px;
+  --r-card-sm: 8px;
+  --r-pill: 999px;
+
+  --font-heading: 'Noto Serif JP', 'Zen Kaku Gothic New', serif;
+  --font-body: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  --tabbar-h: 68px;
+  --header-h: 52px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: #302a26; /* PCで見たときの枠外の色 */
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 0; }
+input, textarea, select { font: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+
+/* ================================================================
+   スマホ枠
+   PC → iPhone風フレームに入れて表示
+   実機（幅 480px 未満）→ フルスクリーン
+   ================================================================ */
+.stage {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 44px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 10px #1a1614;
+}
+
+/* ノッチ（PCで見たときだけ表示） */
+.notch {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 30px;
+  background: #1a1614;
+  border-radius: 20px;
+  z-index: 30;
+}
+
+/* 実機（スマホ）ではフルスクリーンにする */
+@media (max-width: 480px) {
+  body { background: var(--bg); }
+  .stage { padding: 0; align-items: stretch; }
+  .phone {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .notch { display: none; }
+}
+
+/* ================================================================
+   画面共通
+   ================================================================ */
+.screens {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  will-change: transform;
+}
+.screen.active { transform: translateX(0); z-index: 2; }
+.screen.leaving-left { transform: translateX(-30%); z-index: 1; }
+.screen.stacked { transform: translateX(0); z-index: 3; }
+
+/* モーダル系（詳細）は下から出す */
+.screen.modal { transform: translateY(100%); }
+.screen.modal.active { transform: translateY(0); z-index: 5; }
+
+/* ステータスバー風の上の余白 */
+.status-bar {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.status-bar .right { display: flex; gap: 6px; align-items: center; font-size: 10px; }
+
+@media (max-width: 480px) {
+  .status-bar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(44px + env(safe-area-inset-top));
+  }
+}
+
+/* 上部ヘッダー */
+.app-header {
+  flex-shrink: 0;
+  padding: 8px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--header-h);
+  background: var(--bg);
+}
+.app-header .back {
+  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 16px;
+  color: var(--ink);
+}
+.app-header .title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 500;
+  flex: 1;
+}
+.app-header .brand {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  flex: 1;
+}
+.app-header .brand small {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--ink-3);
+  letter-spacing: 0.16em;
+  margin-left: 4px;
+}
+.app-header .icon-btn {
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+  font-size: 18px;
+}
+
+/* 本文スクロール領域 */
+.screen-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--tabbar-h) + 12px);
+}
+.screen-body.no-tabbar { padding-bottom: 20px; }
+
+@media (max-width: 480px) {
+  .screen-body { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 4px); }
+  .screen-body.no-tabbar { padding-bottom: calc(env(safe-area-inset-bottom) + 20px); }
+}
+
+/* ================================================================
+   タブバー（下）
+   ================================================================ */
+.tabbar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: var(--tabbar-h);
+  display: flex;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--line);
+  z-index: 10;
+  padding-bottom: 0;
+}
+@media (max-width: 480px) {
+  .tabbar {
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+.tabbar.hidden { transform: translateY(100%); transition: transform 0.3s; }
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--ink-3);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  transition: color 0.2s;
+}
+.tab .ico { font-size: 20px; line-height: 1; }
+.tab.active { color: var(--ink); }
+.tab.active .ico { transform: scale(1.05); }
+
+.tab.center {
+  position: relative;
+}
+.tab.center .fab {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-top: -6px;
+  box-shadow: 0 6px 16px rgba(30,24,21,0.3);
+}
+.tab.center .lbl { color: var(--ink-3); }
+
+/* ================================================================
+   共通パーツ：チップ、タグ、カード
+   ================================================================ */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 9px 16px;
+  margin: 0 20px 12px;
+}
+.search-bar .ico { color: var(--ink-3); font-size: 14px; }
+.search-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+}
+.search-bar .ico-btn {
+  color: var(--ink-3);
+  font-size: 16px;
+}
+
+.chip-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 20px 16px;
+  scrollbar-width: none;
+}
+.chip-scroll::-webkit-scrollbar { display: none; }
+
+.chip-btn {
+  padding: 7px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  color: var(--ink-2);
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.chip-btn.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.chip-btn .count {
+  color: var(--ink-4);
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.chip-btn.active .count { color: rgba(255,255,255,0.5); }
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: var(--surface-mute);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  display: inline-block;
+}
+.tag.accent { background: transparent; border-color: var(--accent); color: var(--accent); }
+.tag.damage-1 { background: #e8f0e2; border-color: #b8d1a2; color: #4a6a3a; }
+.tag.damage-2 { background: #f0ebd8; border-color: #d1c47a; color: #6a5f2a; }
+.tag.damage-3 { background: #f0dbc9; border-color: #d1a072; color: #6a4a2a; }
+.tag.damage-4 { background: #f0cec6; border-color: #d17070; color: #6a3030; }
+
+/* 施術事例カード */
+.case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 20px;
+}
+
+.case-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  transition: transform 0.15s;
+}
+.case-card:active { transform: scale(0.98); }
+
+.before-after {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 180px;
+  background: var(--surface-mute);
+}
+.before-after .side {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: rgba(255,255,255,0.9);
+}
+.before-after .side.blonde { background: linear-gradient(160deg, #e5d3aa 0%, #b89168 100%); }
+.before-after .side.ash { background: linear-gradient(160deg, #5a5455 0%, #2a2828 100%); }
+.before-after .side.pink { background: linear-gradient(160deg, #d4a89f 0%, #8a4a52 100%); }
+.before-after .side.beige { background: linear-gradient(160deg, #c9a980 0%, #6b4e3a 100%); }
+.before-after .side.gray { background: linear-gradient(160deg, #b8b0a6 0%, #6a625a 100%); }
+.before-after .side.silver { background: linear-gradient(160deg, #d5d0c8 0%, #7a7570 100%); }
+.before-after .side.brown { background: linear-gradient(160deg, #d9c4ae 0%, #8a6e58 100%); }
+.before-after .side.dark { background: linear-gradient(160deg, #4a2e2e 0%, #1a1010 100%); }
+/* 実写を使うクラス（写真自体にBEFORE/AFTERラベル焼き込み済みなので、テキストラベルは非表示） */
+.before-after .side.real-before {
+  background-image: url('assets/before.png');
+  background-size: cover;
+  background-position: center top;
+}
+.before-after .side.real-after {
+  background-image: url('assets/after.png');
+  background-size: cover;
+  background-position: center top;
+}
+.before-after .side.real-before,
+.before-after .side.real-after { color: transparent; font-size: 0; }
+.before-after .divider {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 1px;
+  background: rgba(255,255,255,0.5);
+}
+
+.case-body {
+  padding: 14px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.case-title {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.case-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.case-recipe {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  padding: 6px 10px;
+  background: var(--surface-mute);
+  border-radius: var(--r-card-sm);
+  border-left: 2px solid var(--accent);
+  line-height: 1.6;
+}
+
+.case-author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.case-author .avatar {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  flex-shrink: 0;
+}
+
+.action-bar {
+  display: flex;
+  gap: 16px;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.action-bar .act {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.15s, transform 0.1s;
+}
+.action-bar .act:active { transform: scale(0.9); }
+.action-bar .act .ico { font-size: 16px; line-height: 1; }
+.action-bar .act.on { color: var(--accent); }
+.action-bar .save { margin-left: auto; }
+
+/* ================================================================
+   ページ見出し（各画面）
+   ================================================================ */
+.page-title {
+  padding: 0 20px 16px;
+}
+.page-title h1 {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.page-title .lead {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+/* ================================================================
+   詳細画面
+   ================================================================ */
+.detail-photos {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 260px;
+  margin: 0;
+}
+.detail-photos .side {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px;
+  color: rgba(255,255,255,0.9);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+.detail-photos .side.blonde { background: linear-gradient(160deg, #e5d3aa 0%, #b89168 100%); }
+.detail-photos .side.ash { background: linear-gradient(160deg, #5a5455 0%, #2a2828 100%); }
+.detail-photos .side.brown { background: linear-gradient(160deg, #d9c4ae 0%, #8a6e58 100%); }
+.detail-photos .side.beige { background: linear-gradient(160deg, #c9a980 0%, #6b4e3a 100%); }
+.detail-photos .side.gray { background: linear-gradient(160deg, #b8b0a6 0%, #6a625a 100%); }
+.detail-photos .side.pink { background: linear-gradient(160deg, #d4a89f 0%, #8a4a52 100%); }
+.detail-photos .side.real-before {
+  background-image: url('assets/before.png');
+  background-size: cover;
+  background-position: center top;
+  color: transparent;
+  font-size: 0;
+}
+.detail-photos .side.real-after {
+  background-image: url('assets/after.png');
+  background-size: cover;
+  background-position: center top;
+  color: transparent;
+  font-size: 0;
+}
+.detail-photos .divider {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 1px;
+  background: rgba(255,255,255,0.5);
+}
+
+.detail-body {
+  padding: 20px;
+}
+
+.detail-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.35;
+  margin-bottom: 12px;
+}
+
+.detail-author-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  margin-bottom: 16px;
+}
+.detail-author-row .avatar {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  flex-shrink: 0;
+}
+.detail-author-row .name { font-size: 13px; font-weight: 500; }
+.detail-author-row .role { font-size: 11px; color: var(--ink-3); }
+.detail-author-row .follow-btn {
+  margin-left: auto;
+  padding: 6px 14px;
+  border: 1px solid var(--ink);
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  background: var(--ink);
+  color: var(--bg);
+  transition: background 0.15s;
+}
+.detail-author-row .follow-btn.following {
+  background: transparent;
+  color: var(--ink);
+}
+
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  margin-bottom: 16px;
+}
+.meta-item .k {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.meta-item .v {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 20px 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+.detail-tabs .dt {
+  padding: 10px 4px;
+  font-size: 13px;
+  color: var(--ink-3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  flex: 1;
+  text-align: center;
+  transition: color 0.15s;
+}
+.detail-tabs .dt.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  font-weight: 500;
+}
+
+.detail-pane { display: none; }
+.detail-pane.active { display: block; }
+
+.detail-section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.detail-section h3 {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.detail-section h3 .num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+}
+.detail-section p { font-size: 13px; color: var(--ink-2); line-height: 1.9; }
+
+.recipe-block {
+  background: var(--surface-mute);
+  border-radius: var(--r-card-sm);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  line-height: 1.9;
+  border-left: 3px solid var(--accent);
+}
+.recipe-block .r-line { display: flex; justify-content: space-between; }
+.recipe-block .r-name { color: var(--ink); }
+.recipe-block .r-amount { color: var(--accent); }
+.recipe-block .r-sub { color: var(--ink-3); font-size: 10px; margin-top: 8px; }
+
+.process-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.p-step {
+  display: grid;
+  grid-template-columns: 44px 56px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 12px;
+}
+.p-step:last-child { border-bottom: none; }
+.p-step .no { font-family: var(--font-mono); font-size: 9px; color: var(--ink-3); letter-spacing: 0.1em; }
+.p-step .time { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.p-step .txt { color: var(--ink-2); line-height: 1.6; }
+
+.detail-actions-fixed {
+  position: sticky;
+  bottom: 0;
+  background: rgba(244,240,233,0.95);
+  backdrop-filter: blur(12px);
+  padding: 12px 20px;
+  margin: 0 -20px -20px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+}
+.detail-actions-fixed button {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.detail-actions-fixed button .ico { font-size: 15px; }
+.detail-actions-fixed button.on {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.detail-actions-fixed button.save-btn.on {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+/* ================================================================
+   検索画面
+   ================================================================ */
+.facet-section {
+  padding: 0 20px 16px;
+}
+.facet {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.facet .f-head {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.facet .f-head .clear {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--ink-4);
+  letter-spacing: 0.1em;
+}
+.check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.check-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+  padding: 6px 0;
+}
+.check-list .box {
+  width: 18px; height: 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.check-list label.on .box {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.check-list label.on .box::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  color: var(--bg);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.check-list .count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-4);
+}
+
+/* 詳細検索を開くボタン */
+.search-open-btn {
+  margin: 0 20px 16px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  color: var(--ink-2);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% - 40px);
+}
+.search-open-btn .badge {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.signup-hero {
+  padding: 56px 20px 16px;
+  text-align: center;
+}
+.signup-hero .brand { justify-content: center; }
+.signup-hero p {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.9;
+}
+.signup-actions { padding: 4px 20px 40px; }
+.signup-actions .btn { width: 100%; }
+
+.uploader.has-img {
+  background-size: cover;
+  background-position: center;
+  color: transparent;
+  border-color: transparent;
+}
+.uploader.has-img .ico { display: none; }
+
+.empty-note {
+  padding: 36px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.9;
+}
+
+.result-footer {
+  padding: 4px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.result-footer .shown-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+}
+.load-more-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.load-more-btn:active { background: var(--line); }
+.load-more-btn.done {
+  color: var(--ink-4);
+  pointer-events: none;
+}
+
+.search-hint {
+  padding: 0 20px 16px;
+  font-size: 12px;
+  color: var(--ink-3);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.search-hint .lbl {
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  width: 100%;
+  margin-bottom: 4px;
+}
+.hint-chip {
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* ================================================================
+   投稿作成画面
+   ================================================================ */
+.form-stepper {
+  display: flex;
+  gap: 6px;
+  padding: 0 20px 20px;
+  align-items: center;
+}
+.st-dot {
+  flex: 1;
+  height: 4px;
+  background: var(--surface-mute);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+.st-dot.done { background: var(--good); }
+.st-dot.active { background: var(--ink); }
+.st-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.1em;
+  margin-left: 4px;
+}
+
+.form-step-title {
+  padding: 0 20px 20px;
+}
+.form-step-title h2 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.form-step-title p {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.form-body {
+  padding: 0 20px;
+}
+
+.form-fieldset {
+  margin-bottom: 20px;
+}
+.form-fieldset .fs-head {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.field label .req { color: var(--accent); margin-left: 3px; }
+.field input[type=text],
+.field textarea {
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card-sm);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field input[type=text]:focus,
+.field textarea:focus { border-color: var(--ink); }
+.field textarea { min-height: 80px; resize: vertical; font-family: var(--font-body); }
+
+.damage-slider {
+  display: flex;
+  gap: 4px;
+}
+.dmg {
+  flex: 1;
+  padding: 10px 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card-sm);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.dmg.selected {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+.photo-uploader {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.uploader {
+  aspect-ratio: 3/4;
+  border: 2px dashed var(--line);
+  border-radius: var(--r-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 11px;
+  background: var(--surface);
+}
+.uploader .ico { font-size: 26px; opacity: 0.6; }
+.uploader.filled { border-color: transparent; }
+.uploader.filled.before {
+  background-image: url('assets/before.png');
+  background-size: cover;
+  background-position: center top;
+  color: transparent;
+  font-size: 0;
+}
+.uploader.filled.after {
+  background-image: url('assets/after.png');
+  background-size: cover;
+  background-position: center top;
+  color: transparent;
+  font-size: 0;
+}
+
+.form-actions {
+  position: sticky;
+  bottom: 0;
+  background: rgba(244,240,233,0.95);
+  backdrop-filter: blur(12px);
+  padding: 12px 20px;
+  margin: 20px -20px -20px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+}
+.form-actions .btn,
+.signup-actions .btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  border: 1px solid var(--ink);
+  transition: opacity 0.15s;
+}
+.form-actions .btn.ghost,
+.signup-actions .btn.ghost { background: transparent; color: var(--ink); }
+.form-actions .btn.primary,
+.signup-actions .btn.primary { background: var(--ink); color: var(--bg); }
+.form-actions .btn:disabled { opacity: 0.35; }
+
+/* 投稿完了トースト */
+.toast {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-140%);
+  background: var(--ink);
+  color: var(--bg);
+  padding: 12px 20px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  z-index: 20;
+  transition: transform 0.3s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ================================================================
+   お気に入り画面
+   ================================================================ */
+.fav-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 20px 16px;
+  scrollbar-width: none;
+}
+.fav-tabs::-webkit-scrollbar { display: none; }
+
+.fav-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 20px;
+}
+.fav-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.fav-card .thumb {
+  aspect-ratio: 1;
+  position: relative;
+}
+.fav-card .thumb::after {
+  content: "◇";
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 24px; height: 24px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--ink);
+}
+.fav-card .thumb.t1 {
+  background-image: url('assets/after.png');
+  background-size: cover;
+  background-position: center top;
+}
+.fav-card .thumb.t2 { background: linear-gradient(160deg, #e5d3aa, #5a5455); }
+.fav-card .thumb.t3 { background: linear-gradient(160deg, #d4a89f, #8a4a52); }
+.fav-card .thumb.t4 { background: linear-gradient(160deg, #c9a980, #6b4e3a); }
+.fav-card .thumb.t5 { background: linear-gradient(160deg, #b8b0a6, #6a625a); }
+.fav-card .thumb.t6 { background: linear-gradient(160deg, #d5d0c8, #7a7570); }
+
+.fav-card .cap {
+  padding: 8px 10px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.fav-card .cap .t {
+  color: var(--ink);
+  font-weight: 500;
+  margin-bottom: 3px;
+  font-family: var(--font-heading);
+  font-size: 12px;
+}
+.fav-card .cap .a {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+/* ================================================================
+   マイページ
+   ================================================================ */
+.profile-header {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.profile-header .p-avatar {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  margin-bottom: 12px;
+}
+.profile-header .p-name {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.profile-header .p-role {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+.profile-header .p-bio {
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.7;
+  max-width: 280px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+.stat-tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card-sm);
+  padding: 10px 8px;
+  text-align: center;
+}
+.stat-tile .v {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  color: var(--ink);
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+.stat-tile .k {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+.profile-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin: 0 20px 16px;
+}
+.profile-tabs .tab-m {
+  padding: 12px 4px;
+  font-size: 13px;
+  color: var(--ink-3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  flex: 1;
+  text-align: center;
+}
+.profile-tabs .tab-m.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  font-weight: 500;
+}
+
+/* ハートアニメーション */
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+.act.pop .ico { animation: heart-pop 0.3s ease; }
+
+/* いいねの浮遊ハート */
+.floating-heart {
+  position: absolute;
+  color: var(--accent);
+  font-size: 24px;
+  pointer-events: none;
+  animation: floatUp 0.8s ease-out forwards;
+  z-index: 20;
+}
+@keyframes floatUp {
+  0% { transform: translate(-50%, 0) scale(0.8); opacity: 1; }
+  100% { transform: translate(-50%, -60px) scale(1.4); opacity: 0; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="phone">
+    <div class="notch"></div>
+
+    <div class="screens" id="screens">
+
+      <!-- ================================================================
+           0. アカウント作成
+           ================================================================ -->
+      <div class="screen" data-screen="signup">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="screen-body no-tabbar">
+
+          <div class="signup-hero">
+            <div class="brand">STYLE ARCHIVE<small>KNOWLEDGE BASE</small></div>
+            <p>施術事例を記録・共有するための<br>プロフィールを作成しましょう</p>
+          </div>
+
+          <div class="form-fieldset">
+            <div class="fs-head">PROFILE</div>
+            <div class="field">
+              <label>名前<span class="req">*</span></label>
+              <input type="text" id="su-name" placeholder="例: Yuuki Aizawa">
+            </div>
+            <div class="field">
+              <label>サロン名</label>
+              <input type="text" id="su-salon" placeholder="例: SALON TOKYO GINZA">
+            </div>
+            <div class="field">
+              <label>役職</label>
+              <input type="text" id="su-role" placeholder="例: スタイリスト">
+            </div>
+            <div class="field">
+              <label>自己紹介</label>
+              <textarea id="su-bio" placeholder="得意な施術やこだわりなど"></textarea>
+            </div>
+          </div>
+
+          <div class="signup-actions">
+            <button class="btn primary" id="su-submit">アカウントを作成</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           1. ホーム
+           ================================================================ -->
+      <div class="screen active" data-screen="home">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <div class="brand">STYLE ARCHIVE<small>KNOWLEDGE BASE</small></div>
+          <button class="icon-btn" data-nav="search">⌕</button>
+          <button class="icon-btn">◔</button>
+        </div>
+        <div class="screen-body">
+
+          <div class="page-title">
+            <h1>今日の施術事例</h1>
+            <div class="lead">1,284 CASES · UPDATED 14 MIN AGO</div>
+          </div>
+
+          <div class="chip-scroll">
+            <button class="chip-btn active">すべて<span class="count">1284</span></button>
+            <button class="chip-btn">カラー<span class="count">842</span></button>
+            <button class="chip-btn">ブリーチ<span class="count">310</span></button>
+            <button class="chip-btn">白髪ぼかし<span class="count">156</span></button>
+            <button class="chip-btn">縮毛矯正<span class="count">98</span></button>
+            <button class="chip-btn">パーマ<span class="count">72</span></button>
+          </div>
+
+          <div class="case-list" id="home-list">
+
+            <article class="case-card" data-open-detail="1">
+              <div class="before-after">
+                <div class="side real-before">BEFORE</div>
+                <div class="side real-after">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">ハイトーンから濁らせないダークアッシュ</div>
+                <div class="case-meta">
+                  <span class="tag damage-3">DAMAGE 3</span>
+                  <span class="tag">Lv8 → Lv6</span>
+                  <span class="tag accent">BLEACH 履歴あり</span>
+                </div>
+                <div class="case-recipe">
+                  N.カラー 6/13 : 6/00 : Ash-8 = 30 : 20 : 10<br>OX 3% / 25min
+                </div>
+                <div class="case-author">
+                  <div class="avatar"></div>
+                  <span>Mika Sato · SALON TOKYO</span>
+                </div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="124"><span class="ico">♡</span><span class="n">124</span></button>
+                <button class="act"><span class="ico">💬</span>18</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           2. 検索
+           ================================================================ -->
+      <div class="screen" data-screen="search">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <div class="title">検索</div>
+        </div>
+        <div class="screen-body">
+
+          <div class="search-bar">
+            <span class="ico">⌕</span>
+            <input type="text" placeholder="キーワード・薬剤名・カラー名で探す">
+          </div>
+
+          <div class="search-hint">
+            <span class="lbl">RECENT</span>
+            <span class="hint-chip">ダークアッシュ</span>
+            <span class="hint-chip">白髪ぼかし</span>
+            <span class="hint-chip">ノーブリーチ ベージュ</span>
+            <span class="hint-chip">シルバー</span>
+          </div>
+
+          <div class="facet-section">
+            <div class="facet">
+              <div class="f-head">目標カラー <span class="clear">CLEAR</span></div>
+              <div class="check-list">
+                <label class="on"><span class="box"></span>アッシュ系<span class="count">328</span></label>
+                <label><span class="box"></span>ベージュ系<span class="count">412</span></label>
+                <label><span class="box"></span>ピンク系<span class="count">184</span></label>
+                <label><span class="box"></span>シルバー系<span class="count">76</span></label>
+                <label><span class="box"></span>マット系<span class="count">129</span></label>
+              </div>
+            </div>
+
+            <div class="facet">
+              <div class="f-head">薬剤メーカー（カラー）</div>
+              <div class="check-list">
+                <label class="on"><span class="box"></span>イルミナカラー<span class="count">226</span></label>
+                <label><span class="box"></span>コレストン<span class="count">198</span></label>
+                <label><span class="box"></span>アディクシー<span class="count">254</span></label>
+                <label><span class="box"></span>フィヨーレ<span class="count">112</span></label>
+                <label><span class="box"></span>N.<span class="count">348</span></label>
+              </div>
+            </div>
+
+            <div class="facet">
+              <div class="f-head">薬剤メーカー（縮毛矯正）</div>
+              <div class="check-list">
+                <label class="on"><span class="box"></span>クオライン<span class="count">96</span></label>
+                <label><span class="box"></span>ウトエト<span class="count">74</span></label>
+                <label><span class="box"></span>HITA<span class="count">58</span></label>
+              </div>
+            </div>
+
+            <button class="search-open-btn">
+              <span>この条件で検索</span>
+              <span class="badge">324件</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           3. 投稿作成
+           ================================================================ -->
+      <div class="screen" data-screen="new">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <button class="back" data-nav="home">✕</button>
+          <div class="title">投稿する</div>
+          <button class="icon-btn"><span style="font-size:12px;">下書き</span></button>
+        </div>
+        <div class="screen-body no-tabbar">
+
+          <div class="form-stepper">
+            <div class="st-dot active" data-step="1"></div>
+            <div class="st-dot" data-step="2"></div>
+            <div class="st-dot" data-step="3"></div>
+            <div class="st-dot" data-step="4"></div>
+            <span class="st-num" id="st-num">1 / 4</span>
+          </div>
+
+          <!-- ステップ1: 写真 -->
+          <div class="form-body form-step" data-step="1">
+            <div class="form-step-title">
+              <h2>ビフォー / アフター</h2>
+              <p>2枚以上の写真をアップロード</p>
+            </div>
+            <div class="form-fieldset">
+              <div class="fs-head">PHOTOS</div>
+              <div class="photo-uploader">
+                <div class="uploader" id="up-before"><span class="ico">+</span>BEFORE</div>
+                <div class="uploader" id="up-after"><span class="ico">+</span>AFTER</div>
+              </div>
+              <input type="file" id="file-before" accept="image/*" hidden>
+              <input type="file" id="file-after" accept="image/*" hidden>
+            </div>
+          </div>
+
+          <!-- ステップ2: 髪の状態 -->
+          <div class="form-body form-step" data-step="2" hidden>
+            <div class="form-step-title">
+              <h2>髪の状態</h2>
+              <p>再現に必要な前提情報</p>
+            </div>
+            <div class="form-fieldset">
+              <div class="field">
+                <label>ベースカラーのレベル<span class="req">*</span></label>
+                <input type="text" id="f-base" value="Lv 8（ブリーチ2回歴あり）">
+              </div>
+              <div class="field">
+                <label>状態メモ</label>
+                <textarea>過去2回のブリーチ履歴あり。中間〜毛先はポーラス毛気味。</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ステップ3: 薬剤 -->
+          <div class="form-body form-step" data-step="3" hidden>
+            <div class="form-step-title">
+              <h2>薬剤とレシピ</h2>
+              <p>配合と OX 濃度をきっちり残す</p>
+            </div>
+            <div class="form-fieldset">
+              <div class="field">
+                <label>薬剤メーカー（複数選択可）</label>
+                <div class="check-list" id="f-maker">
+                  <label><span class="box"></span>イルミナカラー</label>
+                  <label><span class="box"></span>アディクシー</label>
+                  <label><span class="box"></span>エドル</label>
+                  <label><span class="box"></span>N.</label>
+                  <label><span class="box"></span>フィヨーレ</label>
+                  <label><span class="box"></span>キャラデコ</label>
+                  <label><span class="box"></span>コレストン</label>
+                  <label><span class="box"></span>TOIROCTION</label>
+                  <label><span class="box"></span>その他</label>
+                </div>
+              </div>
+              <div class="field">
+                <label>レシピ<span class="req">*</span></label>
+                <textarea id="f-recipe" style="font-family:var(--font-mono);font-size:12px;min-height:120px;">6/13 : 30g
+6/00 : 20g
+Ash-8 : 10g
+OX 3% : 60g</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ステップ4: 仕上げと公開 -->
+          <div class="form-body form-step" data-step="4" hidden>
+            <div class="form-step-title">
+              <h2>仕上げと公開</h2>
+              <p>タイトルとこだわりを添えて公開</p>
+            </div>
+            <div class="form-fieldset">
+              <div class="field">
+                <label>タイトル<span class="req">*</span></label>
+                <input type="text" id="f-title" value="ハイトーンから濁らせないダークアッシュ">
+              </div>
+              <div class="field">
+                <label>仕上げ方法</label>
+                <input type="text" value="洗い流さないTR + オイル">
+              </div>
+              <div class="field">
+                <label>こだわりポイント</label>
+                <textarea style="min-height:120px;">6/00 でブラウンの濁りを打ち消し、Ash-8 で青みを補正。放置を短めにして色沈みを防ぐ。</textarea>
+              </div>
+              <div class="field">
+                <label>公開範囲</label>
+                <div class="damage-slider">
+                  <div class="dmg selected">全体公開</div>
+                  <div class="dmg">サロン内</div>
+                  <div class="dmg">下書き</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn ghost" id="prev-btn" disabled>← 前へ</button>
+            <button class="btn primary" id="next-btn">次へ →</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           4. お気に入り
+           ================================================================ -->
+      <div class="screen" data-screen="fav">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <div class="title">お気に入り</div>
+          <button class="icon-btn">+</button>
+        </div>
+        <div class="screen-body">
+
+          <div class="page-title">
+            <h1>My Saved Cases</h1>
+            <div class="lead">218 ITEMS · 6 COLLECTIONS</div>
+          </div>
+
+          <div class="fav-tabs">
+            <button class="chip-btn active">すべて<span class="count">218</span></button>
+            <button class="chip-btn">寒色系<span class="count">42</span></button>
+            <button class="chip-btn">白髪ぼかし<span class="count">36</span></button>
+            <button class="chip-btn">ブリーチON<span class="count">58</span></button>
+            <button class="chip-btn">ノーブリーチ<span class="count">64</span></button>
+            <button class="chip-btn">暖色系<span class="count">18</span></button>
+          </div>
+
+          <div class="fav-grid">
+            <div class="fav-card" data-open-detail="1">
+              <div class="thumb t1"></div>
+              <div class="cap"><div class="t">濁らせないダークアッシュ</div><div class="a">MIKA SATO</div></div>
+            </div>
+            <div class="fav-card" data-open-detail="2">
+              <div class="thumb t2"></div>
+              <div class="cap"><div class="t">白髪ぼかしハイライト</div><div class="a">REN NAKAMURA</div></div>
+            </div>
+            <div class="fav-card" data-open-detail="3">
+              <div class="thumb t3"></div>
+              <div class="cap"><div class="t">1ブリーチのピンクベージュ</div><div class="a">AIKO MIURA</div></div>
+            </div>
+            <div class="fav-card">
+              <div class="thumb t4"></div>
+              <div class="cap"><div class="t">ノーブリーチ透け感ベージュ</div><div class="a">KANA ITO</div></div>
+            </div>
+            <div class="fav-card">
+              <div class="thumb t5"></div>
+              <div class="cap"><div class="t">グレイッシュ白髪染め</div><div class="a">YUKA HOSHINO</div></div>
+            </div>
+            <div class="fav-card" data-open-detail="4">
+              <div class="thumb t6"></div>
+              <div class="cap"><div class="t">シルバーグレージュ</div><div class="a">SHO FUJITA</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           5. マイページ
+           ================================================================ -->
+      <div class="screen" data-screen="me">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <div class="title">マイページ</div>
+          <button class="icon-btn" id="btn-edit-profile">⚙</button>
+        </div>
+        <div class="screen-body">
+
+          <div class="profile-header">
+            <div class="p-avatar"></div>
+            <div class="p-name">Yuuki Aizawa</div>
+            <div class="p-role">STYLIST · SALON TOKYO GINZA · SINCE 2018</div>
+            <div class="p-bio">寒色系カラー設計と、白髪ぼかしのハイライトが得意です。再現性のあるレシピを共有していきたい。</div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-tile"><div class="v">128</div><div class="k">POSTS</div></div>
+            <div class="stat-tile"><div class="v">3.8k</div><div class="k">LIKES</div></div>
+            <div class="stat-tile"><div class="v">1.2k</div><div class="k">SAVED</div></div>
+            <div class="stat-tile"><div class="v">642</div><div class="k">FOLLOW</div></div>
+          </div>
+
+          <div class="profile-tabs">
+            <div class="tab-m active">投稿</div>
+            <div class="tab-m">下書き</div>
+            <div class="tab-m">保存</div>
+            <div class="tab-m">分析</div>
+          </div>
+
+          <div class="case-list" id="me-post-list">
+            <article class="case-card" data-open-detail="1">
+              <div class="before-after">
+                <div class="side real-before">BEFORE</div>
+                <div class="side real-after">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">シークレットハイライトで作る立体感</div>
+                <div class="case-meta">
+                  <span class="tag damage-2">DAMAGE 2</span>
+                  <span class="tag">1BLEACH</span>
+                </div>
+                <div class="case-recipe">Ash-8 : Matte-8 = 30 : 20</div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="84"><span class="ico">♡</span><span class="n">84</span></button>
+                <button class="act"><span class="ico">💬</span>12</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+
+            <article class="case-card">
+              <div class="before-after">
+                <div class="side gray">BEFORE</div>
+                <div class="side ash">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">白髪をぼかす寒色設計</div>
+                <div class="case-meta">
+                  <span class="tag damage-1">DAMAGE 1</span>
+                  <span class="tag">白髪率 30%</span>
+                </div>
+                <div class="case-recipe">Ash6 : Matte6 : Clear = 20:10:30</div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="142"><span class="ico">♡</span><span class="n">142</span></button>
+                <button class="act"><span class="ico">💬</span>22</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           検索結果画面
+           ================================================================ -->
+      <div class="screen" data-screen="search-result">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <button class="back" data-nav="search">←</button>
+          <div class="title">検索結果</div>
+          <button class="icon-btn" data-nav="search">⌕</button>
+        </div>
+        <div class="screen-body">
+
+          <div class="page-title">
+            <h1 style="display:flex;align-items:baseline;gap:8px;">
+              <span style="font-family:var(--font-mono);font-size:22px;">324</span>
+              <span style="font-size:16px;color:var(--ink-2);font-weight:400;">件の結果</span>
+            </h1>
+            <div class="lead">アッシュ系 · カラー: イルミナカラー · 縮毛矯正: クオライン</div>
+          </div>
+
+          <div class="chip-scroll">
+            <button class="chip-btn active">新着順</button>
+            <button class="chip-btn">保存数</button>
+            <button class="chip-btn">いいね数</button>
+            <button class="chip-btn">近い施術</button>
+          </div>
+
+          <div class="case-list" id="result-list">
+
+            <article class="case-card" data-open-detail="1" data-idx="0" data-likes="124" data-saves="41" data-match="98">
+              <div class="before-after">
+                <div class="side real-before">BEFORE</div>
+                <div class="side real-after">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">ハイトーンから濁らせないダークアッシュ</div>
+                <div class="case-meta">
+                  <span class="tag damage-3">DAMAGE 3</span>
+                  <span class="tag">Lv8 → Lv6</span>
+                </div>
+                <div class="case-recipe">N.カラー 6/13:6/00:Ash-8 = 30:20:10</div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="124"><span class="ico">♡</span><span class="n">124</span></button>
+                <button class="act"><span class="ico">💬</span>18</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+
+            <article class="case-card" data-idx="1" data-likes="203" data-saves="67" data-match="91">
+              <div class="before-after">
+                <div class="side beige">BEFORE</div>
+                <div class="side ash">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">ノーブリーチのダークアッシュリタッチ</div>
+                <div class="case-meta">
+                  <span class="tag damage-2">DAMAGE 2</span>
+                  <span class="tag">Lv7 → Lv6</span>
+                </div>
+                <div class="case-recipe">Ordeve Ash-6 : Nb-6 = 40 : 20</div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="203"><span class="ico">♡</span><span class="n">203</span></button>
+                <button class="act"><span class="ico">💬</span>26</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+
+            <article class="case-card" data-idx="2" data-likes="178" data-saves="52" data-match="87">
+              <div class="before-after">
+                <div class="side gray">BEFORE</div>
+                <div class="side ash">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">白髪ぼかしのダークアッシュ設計</div>
+                <div class="case-meta">
+                  <span class="tag damage-2">DAMAGE 2</span>
+                  <span class="tag">白髪率 40%</span>
+                </div>
+                <div class="case-recipe">THROW Ash7 : Matte7 : Cl = 20:10:30</div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="178"><span class="ico">♡</span><span class="n">178</span></button>
+                <button class="act"><span class="ico">💬</span>22</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+
+            <article class="case-card" data-idx="3" data-likes="92" data-saves="28" data-match="84">
+              <div class="before-after">
+                <div class="side brown">BEFORE</div>
+                <div class="side ash">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">オンカラーだけで叶える寒色系ダーク</div>
+                <div class="case-meta">
+                  <span class="tag damage-1">DAMAGE 1</span>
+                  <span class="tag">Lv6 → Lv5</span>
+                </div>
+                <div class="case-recipe">ILLUMINA Ocean-6 : Cool-6 = 30 : 30</div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="92"><span class="ico">♡</span><span class="n">92</span></button>
+                <button class="act"><span class="ico">💬</span>14</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+
+          </div>
+
+          <div class="result-footer">
+            <div class="shown-count"><span id="result-shown">4</span> / 324 件を表示</div>
+            <button class="load-more-btn" id="load-more">さらに読み込む</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ================================================================
+           詳細画面（モーダル）
+           ================================================================ -->
+      <div class="screen modal" data-screen="detail">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <button class="back" data-close-detail>←</button>
+          <div class="title" id="detail-title-h">施術事例</div>
+          <button class="icon-btn">⋯</button>
+        </div>
+        <div class="screen-body no-tabbar" id="detail-body">
+          <!-- JSで注入 -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================================================
+         下タブバー
+         ================================================================ -->
+    <div class="tabbar" id="tabbar">
+      <button class="tab active" data-nav="home"><span class="ico">◐</span><span>ホーム</span></button>
+      <button class="tab" data-nav="search"><span class="ico">⌕</span><span>検索</span></button>
+      <button class="tab center" data-nav="new">
+        <div class="fab">+</div>
+        <span class="lbl">投稿</span>
+      </button>
+      <button class="tab" data-nav="fav"><span class="ico">♡</span><span>保存</span></button>
+      <button class="tab" data-nav="me"><span class="ico">◇</span><span>マイ</span></button>
+    </div>
+
+    <!-- トースト -->
+    <div class="toast" id="toast">投稿しました ✓</div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================================================================
+     状態
+     ================================================================ */
+  var current = "home";
+  var previous = "home";
+  var formStep = 1;
+  var totalSteps = 4;
+
+  /* ================================================================
+     画面切り替え
+     ================================================================ */
+  function navigate(to) {
+    if (to === current) return;
+    var fromEl = document.querySelector('[data-screen="' + current + '"]');
+    var toEl = document.querySelector('[data-screen="' + to + '"]');
+    if (!toEl) return;
+
+    // 詳細以外の間の切り替えはフェード風の横スライド
+    if (fromEl) {
+      fromEl.classList.remove("active");
+    }
+    toEl.classList.add("active");
+    previous = current;
+    current = to;
+
+    // タブバーの選択状態
+    document.querySelectorAll(".tabbar .tab").forEach(function (t) {
+      t.classList.toggle("active", t.dataset.nav === to);
+    });
+
+    // タブバーの表示/非表示（アカウント作成中のみ非表示）
+    var tabbar = document.getElementById("tabbar");
+    tabbar.classList.toggle("hidden", to === "signup");
+
+    // スクロール位置リセット
+    var body = toEl.querySelector(".screen-body");
+    if (body) body.scrollTop = 0;
+  }
+
+  document.querySelectorAll("[data-nav]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      navigate(el.dataset.nav);
+    });
+  });
+
+  /* 「この条件で検索」ボタン → 検索結果画面へ */
+  document.querySelectorAll(".search-open-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      navigate("search-result");
+    });
+  });
+
+  /* 検索バーの Enter キーで検索実行 */
+  document.querySelectorAll(".search-bar input").forEach(function (inp) {
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        inp.blur();
+        navigate("search-result");
+      }
+    });
+  });
+
+  /* 検索バーの虫眼鏡アイコンをタップしても検索実行 */
+  document.querySelectorAll(".search-bar .ico").forEach(function (ico) {
+    ico.addEventListener("click", function () {
+      navigate("search-result");
+    });
+  });
+
+  /* ================================================================
+     検索結果リスト（サンプルカードの自動生成 + さらに読み込む）
+     ================================================================ */
+  var RESULT_TOTAL = 324;
+  var RESULT_POOL = [
+    { title: "透明感重視のスモーキーアッシュ", dmg: 2, lv: "Lv7 → Lv6", recipe: "THROW A-7 : Mt-7 = 30 : 15", before: "brown", after: "ash", likes: 156, comments: 19, saves: 49, match: 95 },
+    { title: "赤みを消すブルーアッシュのワンメイク", dmg: 1, lv: "Lv6 → Lv6", recipe: "ILLUMINA Ocean-8 : Ash-6 = 40 : 20", before: "beige", after: "dark", likes: 88, comments: 11, saves: 22, match: 93 },
+    { title: "暗髪でも柔らかいアッシュグレージュ", dmg: 2, lv: "Lv7 → Lv5", recipe: "Ordeve Gr-6 : A-6 : Cl = 30:20:10", before: "blonde", after: "ash", likes: 231, comments: 34, saves: 80, match: 76 },
+    { title: "退色後まで計算したアッシュベージュ", dmg: 2, lv: "Lv8 → Lv7", recipe: "N.カラー 7/13 : 7/00 = 40 : 20", before: "gray", after: "beige", likes: 142, comments: 16, saves: 71, match: 89 },
+    { title: "硬毛を柔らかく見せる寒色ダーク", dmg: 1, lv: "Lv6 → Lv5", recipe: "THROW Mt6 : A6 = 30 : 30", before: "brown", after: "dark", likes: 97, comments: 8, saves: 31, match: 72 },
+    { title: "初カラーでも失敗しないダークアッシュ", dmg: 1, lv: "Lv5 → Lv5", recipe: "ILLUMINA Cool-6 単品 / OX 3%", before: "dark", after: "ash", likes: 65, comments: 6, saves: 18, match: 81 },
+    { title: "ブリーチ履歴を活かした濃紺アッシュ", dmg: 3, lv: "Lv9 → Lv6", recipe: "N.カラー 6/13 : BlueVio = 45 : 15", before: "blonde", after: "dark", likes: 189, comments: 27, saves: 61, match: 68 },
+    { title: "うねり対策と両立するアッシュブラウン", dmg: 2, lv: "Lv7 → Lv6", recipe: "Ordeve A-6 : Nb-7 = 35 : 25", before: "silver", after: "ash", likes: 118, comments: 13, saves: 37, match: 90 }
+  ];
+  var resultShown = 4; // 初期表示のハードコード分
+  var poolIndex = 0;
+
+  function makeResultCard(d) {
+    var card = document.createElement("article");
+    card.className = "case-card";
+    card.dataset.idx = resultShown;
+    card.dataset.likes = d.likes;
+    card.dataset.saves = d.saves;
+    card.dataset.match = d.match;
+    card.innerHTML =
+      '<div class="before-after">' +
+        '<div class="side ' + d.before + '">BEFORE</div>' +
+        '<div class="side ' + d.after + '">AFTER</div>' +
+        '<div class="divider"></div>' +
+      '</div>' +
+      '<div class="case-body">' +
+        '<div class="case-title">' + d.title + '</div>' +
+        '<div class="case-meta">' +
+          '<span class="tag damage-' + d.dmg + '">DAMAGE ' + d.dmg + '</span>' +
+          '<span class="tag">' + d.lv + '</span>' +
+        '</div>' +
+        '<div class="case-recipe">' + d.recipe + '</div>' +
+      '</div>' +
+      '<div class="action-bar">' +
+        '<button class="act like" data-count="' + d.likes + '"><span class="ico">♡</span><span class="n">' + d.likes + '</span></button>' +
+        '<button class="act"><span class="ico">💬</span>' + d.comments + '</button>' +
+        '<button class="act save save-btn"><span class="ico">◇</span>保存</button>' +
+      '</div>';
+    wireLike(card.querySelector(".act.like"));
+    wireSave(card.querySelector(".save-btn"));
+    return card;
+  }
+
+  function appendResults(n) {
+    var list = document.getElementById("result-list");
+    if (!list) return;
+    for (var i = 0; i < n && resultShown < RESULT_TOTAL; i++) {
+      list.appendChild(makeResultCard(RESULT_POOL[poolIndex % RESULT_POOL.length]));
+      poolIndex++;
+      resultShown++;
+    }
+    var shownEl = document.getElementById("result-shown");
+    if (shownEl) shownEl.textContent = resultShown;
+    var btn = document.getElementById("load-more");
+    if (btn && resultShown >= RESULT_TOTAL) {
+      btn.classList.add("done");
+      btn.textContent = "すべて読み込みました";
+    }
+  }
+
+  var loadMoreBtn = document.getElementById("load-more");
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener("click", function () { appendResults(8); });
+  }
+
+  /* 並び替えチップ: カードのdata属性でリストを並び替える */
+  var SORT_KEYS = { "新着順": "idx", "保存数": "saves", "いいね数": "likes", "近い施術": "match" };
+  document.querySelectorAll('[data-screen="search-result"] .chip-scroll .chip-btn').forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      var key = SORT_KEYS[chip.textContent.trim()];
+      if (!key) return;
+      var list = document.getElementById("result-list");
+      var cards = Array.prototype.slice.call(list.children);
+      cards.sort(function (a, b) {
+        var av = parseFloat(a.dataset[key]) || 0;
+        var bv = parseFloat(b.dataset[key]) || 0;
+        return key === "idx" ? av - bv : bv - av; // 新着順のみ昇順、他は多い順
+      });
+      cards.forEach(function (el) { list.appendChild(el); });
+      var body = list.closest(".screen-body");
+      if (body) body.scrollTop = 0;
+    });
+  });
+
+  // 初期表示: ハードコードの4件に加えて8件生成し、リストらしい件数にしておく
+  appendResults(8);
+
+  /* ================================================================
+     詳細ページのモックデータ + 表示
+     ================================================================ */
+  var CASES = {
+    "1": {
+      title: "ハイトーンから濁らせない<br>ダークアッシュ設計",
+      before: "real-before", after: "real-after",
+      author: "Mika Sato", role: "SALON TOKYO / 銀座",
+      meta: [
+        ["Damage", "Lv 3 / 中間"],
+        ["Base", "Lv 8（2ブリーチ歴）"],
+        ["Target", "Lv 6 ダークアッシュ"],
+        ["Bleach", "履歴のみ"],
+        ["Time", "25 min"],
+        ["Finish", "TR + オイル"]
+      ],
+      state: "過去2回のブリーチ履歴あり。表面のキューティクルにダメージが残っており、暗染めで濁りやすい状態。中間〜毛先はポーラス毛気味で、色を吸い込みやすく退色も早い。",
+      recipe: [
+        ["▍ 中間〜毛先", ""],
+        ["N.カラー 6/13", "30 g"],
+        ["N.カラー 6/00", "20 g"],
+        ["Ash-8 (トナー)", "10 g"],
+        ["OX 3%", "60 g"],
+        ["▍ 根元リタッチ", ""],
+        ["N.カラー 5/13", "30 g"],
+        ["OX 6%", "30 g"]
+      ],
+      process: [
+        ["STEP 01", "0:00", "シャンプー後、しっかり乾かして施術スタート"],
+        ["STEP 02", "0:05", "根元リタッチ塗布（5/13 + OX 6%）"],
+        ["STEP 03", "0:15", "中間〜毛先へ 6/13:6/00:Ash-8 を塗布"],
+        ["STEP 04", "0:25", "放置。25分（濁り防止で長く置きすぎない）"],
+        ["STEP 05", "0:50", "流し→シャンプー→専用TRで補修→ドライ仕上げ"]
+      ],
+      point: "6/00 を混ぜてブラウンの濁りを打ち消し、Ash-8 で青みを補正。放置時間を「あえて短く」して、色が沈みすぎないようコントロール。"
+    },
+    "2": {
+      title: "白髪ぼかしハイライト<br>× ベージュ",
+      before: "gray", after: "beige",
+      author: "Ren Nakamura", role: "atelier hair / 表参道",
+      meta: [
+        ["Damage", "Lv 2"],
+        ["白髪率", "40%"],
+        ["Target", "Lv 8 ベージュ"],
+        ["Foil", "60枚"],
+        ["Time", "15 min"],
+        ["Finish", "オイル仕上げ"]
+      ],
+      state: "白髪率40%、根元中心。地毛レベルはLv4、既染は退色してLv7〜8。ダメージは比較的軽度。",
+      recipe: [
+        ["▍ ハイライト", ""],
+        ["パウダーブリーチ", "30 g"],
+        ["OX 6%", "60 g"],
+        ["▍ オンカラー", ""],
+        ["8/1", "30 g"],
+        ["Clear", "30 g"],
+        ["OX 3%", "60 g"]
+      ],
+      process: [
+        ["STEP 01", "0:00", "セクショニング、60枚フォイル"],
+        ["STEP 02", "0:20", "ハイライト塗布"],
+        ["STEP 03", "0:35", "15分放置、8レベルまでリフト"],
+        ["STEP 04", "0:50", "流し、シャンプー"],
+        ["STEP 05", "1:00", "全体にオンカラー、20分放置"],
+        ["STEP 06", "1:30", "仕上げ"]
+      ],
+      point: "白髪をぼかすのではなく「デザインとして活かす」意識。ハイライトを細かく入れることで自然な明暗を作る。"
+    },
+    "3": {
+      title: "ブリーチ1回で作る<br>くすみピンクベージュ",
+      before: "brown", after: "pink",
+      author: "Aiko Miura", role: "CIEL / 恵比寿",
+      meta: [
+        ["Damage", "Lv 3"],
+        ["Base", "Lv 6"],
+        ["Target", "Lv 9 くすみピンク"],
+        ["Bleach", "1回"],
+        ["Time", "20 min"],
+        ["Finish", "洗い流さないTR"]
+      ],
+      state: "地毛からのブリーチ1回目。ダメージ軽め。均一にリフトできる状態。",
+      recipe: [
+        ["▍ ブリーチ", ""],
+        ["パウダーブリーチ", "30 g"],
+        ["OX 6%", "60 g"],
+        ["▍ オンカラー", ""],
+        ["Pink 10", "20 g"],
+        ["Beige 12", "20 g"],
+        ["Clear", "20 g"],
+        ["OX 3%", "60 g"]
+      ],
+      process: [
+        ["STEP 01", "0:00", "ブリーチ塗布"],
+        ["STEP 02", "0:25", "リフト確認、Lv12まで"],
+        ["STEP 03", "0:35", "流し→シャンプー→ドライ"],
+        ["STEP 04", "0:55", "オンカラー塗布"],
+        ["STEP 05", "1:15", "20分放置"],
+        ["STEP 06", "1:35", "流し→仕上げ"]
+      ],
+      point: "ピンクだけだと甘くなりすぎるので、Beige12でくすみを、Clearで淡さを調整。1回ブリーチでも透明感を出せる配合。"
+    },
+    "4": {
+      title: "シルバーグレージュ<br>黄ばみを消す薬剤設計",
+      before: "blonde", after: "ash",
+      author: "Sho Fujita", role: "LIM / 中目黒",
+      meta: [
+        ["Damage", "Lv 4"],
+        ["Base", "Lv 12（3ブリーチ）"],
+        ["Target", "Lv 11 シルバー"],
+        ["Bleach", "3回"],
+        ["Time", "15 min"],
+        ["Finish", "紫シャンプー並用"]
+      ],
+      state: "3回ブリーチ済み、Lv12まで抜けている。黄ばみが強めに残っている状態。ダメージレベルは高いのでオキシは低濃度で。",
+      recipe: [
+        ["▍ オンカラー", ""],
+        ["Violet", "5 g"],
+        ["Ash 8", "20 g"],
+        ["Clear", "25 g"],
+        ["OX 2.4%", "50 g"]
+      ],
+      process: [
+        ["STEP 01", "0:00", "全体に塗布"],
+        ["STEP 02", "0:15", "15分放置（短めに）"],
+        ["STEP 03", "0:30", "流し→紫シャンプー→トリートメント"]
+      ],
+      point: "紫は入れすぎると青みすぎるので5gに抑える。オキシ低濃度で色沈みを防ぎつつ、放置時間で調整。紫シャンプーの並用を必ずレコメンド。"
+    }
+  };
+
+  var detailBody = document.getElementById("detail-body");
+  var detailTitleH = document.getElementById("detail-title-h");
+
+  function openDetail(id) {
+    var d = CASES[id] || CASES["1"];
+    detailTitleH.textContent = "施術詳細";
+
+    var recipeHtml = d.recipe.map(function (r) {
+      if (r[0].indexOf("▍") === 0) {
+        return '<div class="r-line" style="margin-top:6px;"><span class="r-name">' + r[0] + '</span><span></span></div>';
+      }
+      return '<div class="r-line"><span class="r-name">' + r[0] + '</span><span class="r-amount">' + r[1] + '</span></div>';
+    }).join("");
+
+    var stepsHtml = d.process.map(function (s) {
+      return '<div class="p-step"><span class="no">' + s[0] + '</span><span class="time">' + s[1] + '</span><span class="txt">' + s[2] + '</span></div>';
+    }).join("");
+
+    detailBody.innerHTML =
+      '<div class="detail-photos">' +
+        '<div class="side ' + d.before + '">BEFORE</div>' +
+        '<div class="side ' + d.after + '">AFTER</div>' +
+        '<div class="divider"></div>' +
+      '</div>' +
+      '<div class="detail-body">' +
+        '<h1 class="detail-title">' + d.title + '</h1>' +
+        '<div class="detail-author-row">' +
+          '<div class="avatar"></div>' +
+          '<div>' +
+            '<div class="name">' + d.author + '</div>' +
+            '<div class="role">' + d.role + '</div>' +
+          '</div>' +
+          '<button class="follow-btn" data-follow>フォロー</button>' +
+        '</div>' +
+
+        '<div class="detail-tabs">' +
+          '<div class="dt active" data-pane="recipe">薬剤レシピ</div>' +
+          '<div class="dt" data-pane="process">工程</div>' +
+          '<div class="dt" data-pane="point">こだわり</div>' +
+        '</div>' +
+
+        '<div class="detail-pane active" data-pane="recipe">' +
+          '<div class="detail-section">' +
+            '<h3><span class="num">01</span>髪の状態</h3>' +
+            '<p>' + d.state + '</p>' +
+          '</div>' +
+          '<div class="detail-section">' +
+            '<h3><span class="num">02</span>薬剤レシピ</h3>' +
+            '<div class="recipe-block">' + recipeHtml + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="detail-pane" data-pane="process">' +
+          '<div class="detail-section">' +
+            '<h3><span class="num">03</span>施術工程</h3>' +
+            '<div class="process-steps">' + stepsHtml + '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="detail-pane" data-pane="point">' +
+          '<div class="detail-section">' +
+            '<h3><span class="num">04</span>こだわったポイント</h3>' +
+            '<p>' + d.point + '</p>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="detail-actions-fixed">' +
+          '<button data-detail-like><span class="ico">♡</span>いいね</button>' +
+          '<button><span class="ico">💬</span>コメント</button>' +
+          '<button class="save-btn" data-detail-save><span class="ico">◇</span>保存</button>' +
+        '</div>' +
+      '</div>';
+
+    // 開く
+    var modal = document.querySelector('[data-screen="detail"]');
+    modal.classList.add("active");
+    document.getElementById("tabbar").classList.add("hidden");
+    bindDetailEvents();
+  }
+
+  function closeDetail() {
+    var modal = document.querySelector('[data-screen="detail"]');
+    modal.classList.remove("active");
+    document.getElementById("tabbar").classList.remove("hidden");
+  }
+
+  function bindDetailEvents() {
+    // タブ切り替え
+    detailBody.querySelectorAll(".dt").forEach(function (dt) {
+      dt.addEventListener("click", function () {
+        detailBody.querySelectorAll(".dt").forEach(function (x) { x.classList.remove("active"); });
+        dt.classList.add("active");
+        detailBody.querySelectorAll(".detail-pane").forEach(function (p) {
+          p.classList.toggle("active", p.dataset.pane === dt.dataset.pane);
+        });
+      });
+    });
+    // フォローボタン
+    var fb = detailBody.querySelector("[data-follow]");
+    if (fb) {
+      fb.addEventListener("click", function () {
+        fb.classList.toggle("following");
+        fb.textContent = fb.classList.contains("following") ? "フォロー中" : "フォロー";
+      });
+    }
+    // いいね
+    var lb = detailBody.querySelector("[data-detail-like]");
+    if (lb) {
+      lb.addEventListener("click", function () {
+        lb.classList.toggle("on");
+        popHeart(lb);
+      });
+    }
+    // 保存
+    var sb = detailBody.querySelector("[data-detail-save]");
+    if (sb) {
+      sb.addEventListener("click", function () {
+        sb.classList.toggle("on");
+        sb.innerHTML = sb.classList.contains("on")
+          ? '<span class="ico">◆</span>保存済'
+          : '<span class="ico">◇</span>保存';
+      });
+    }
+  }
+
+  document.querySelectorAll("[data-open-detail]").forEach(function (card) {
+    card.addEventListener("click", function (e) {
+      // action-bar のボタン内クリックは無視
+      if (e.target.closest(".action-bar")) return;
+      openDetail(card.dataset.openDetail);
+    });
+  });
+
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-close-detail]")) closeDetail();
+  });
+
+  /* ================================================================
+     カードのいいね/保存
+     ================================================================ */
+  function wireLike(btn) {
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = "1";
+    var base = parseInt(btn.dataset.count, 10) || 0;
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      btn.classList.toggle("on");
+      btn.classList.add("pop");
+      setTimeout(function () { btn.classList.remove("pop"); }, 300);
+      var n = btn.querySelector(".n");
+      if (btn.classList.contains("on")) {
+        n.textContent = base + 1;
+        popHeart(btn);
+      } else {
+        n.textContent = base;
+      }
+    });
+  }
+
+  function wireSave(btn) {
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = "1";
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      btn.classList.toggle("on");
+      btn.innerHTML = btn.classList.contains("on")
+        ? '<span class="ico">◆</span>保存済'
+        : '<span class="ico">◇</span>保存';
+    });
+  }
+
+  document.querySelectorAll(".case-card .act.like").forEach(wireLike);
+  document.querySelectorAll(".case-card .save-btn").forEach(wireSave);
+
+  function popHeart(btn) {
+    var rect = btn.getBoundingClientRect();
+    var phone = document.querySelector(".phone").getBoundingClientRect();
+    var h = document.createElement("div");
+    h.className = "floating-heart";
+    h.textContent = "♥";
+    h.style.left = (rect.left - phone.left + rect.width / 2) + "px";
+    h.style.top = (rect.top - phone.top) + "px";
+    document.querySelector(".phone").appendChild(h);
+    setTimeout(function () { h.remove(); }, 800);
+  }
+
+  /* ================================================================
+     検索チェックリスト
+     ================================================================ */
+  document.querySelectorAll(".check-list label").forEach(function (l) {
+    l.addEventListener("click", function () {
+      l.classList.toggle("on");
+    });
+  });
+
+  /* ================================================================
+     チップスクロール（active切り替え）
+     ================================================================ */
+  document.querySelectorAll(".chip-scroll, .fav-tabs").forEach(function (grp) {
+    grp.querySelectorAll(".chip-btn").forEach(function (c) {
+      c.addEventListener("click", function () {
+        grp.querySelectorAll(".chip-btn").forEach(function (x) { x.classList.remove("active"); });
+        c.classList.add("active");
+      });
+    });
+  });
+
+  /* ================================================================
+     プロフィールタブ
+     ================================================================ */
+  document.querySelectorAll(".profile-tabs").forEach(function (grp) {
+    grp.querySelectorAll(".tab-m").forEach(function (t) {
+      t.addEventListener("click", function () {
+        grp.querySelectorAll(".tab-m").forEach(function (x) { x.classList.remove("active"); });
+        t.classList.add("active");
+      });
+    });
+  });
+
+  /* ================================================================
+     ダメージレベル選択
+     ================================================================ */
+  document.querySelectorAll(".damage-slider").forEach(function (grp) {
+    grp.querySelectorAll(".dmg").forEach(function (d) {
+      d.addEventListener("click", function () {
+        grp.querySelectorAll(".dmg").forEach(function (x) { x.classList.remove("selected"); });
+        d.classList.add("selected");
+      });
+    });
+  });
+
+  /* ================================================================
+     投稿作成フォームのステップ
+     ================================================================ */
+  var prevBtn = document.getElementById("prev-btn");
+  var nextBtn = document.getElementById("next-btn");
+  var stNum = document.getElementById("st-num");
+
+  function renderStep() {
+    document.querySelectorAll(".form-step").forEach(function (s) {
+      s.hidden = (parseInt(s.dataset.step, 10) !== formStep);
+    });
+    document.querySelectorAll(".st-dot").forEach(function (d) {
+      var n = parseInt(d.dataset.step, 10);
+      d.classList.toggle("active", n === formStep);
+      d.classList.toggle("done", n < formStep);
+    });
+    stNum.textContent = formStep + " / " + totalSteps;
+    prevBtn.disabled = (formStep === 1);
+    nextBtn.textContent = (formStep === totalSteps) ? "投稿する ✓" : "次へ →";
+
+    var body = document.querySelector('[data-screen="new"] .screen-body');
+    if (body) body.scrollTop = 0;
+  }
+
+  prevBtn.addEventListener("click", function () {
+    if (formStep > 1) { formStep--; renderStep(); }
+  });
+  nextBtn.addEventListener("click", function () {
+    if (formStep < totalSteps) { formStep++; renderStep(); }
+    else {
+      submitPost();
+    }
+  });
+
+  /* ダメージレベル等のセグメント選択 */
+  document.querySelectorAll(".damage-slider").forEach(function (grp) {
+    grp.querySelectorAll(".dmg").forEach(function (d) {
+      d.addEventListener("click", function () {
+        grp.querySelectorAll(".dmg").forEach(function (x) { x.classList.remove("selected"); });
+        d.classList.add("selected");
+      });
+    });
+  });
+
+  function showToast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(function () { t.classList.remove("show"); }, 1400);
+  }
+
+  /* ================================================================
+     アカウント + 実投稿（localStorageに永続化）
+     ================================================================ */
+  var PROFILE_KEY = "sa_profile";
+  var POSTS_KEY = "sa_posts";
+  var photoBefore = null;
+  var photoAfter = null;
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function loadProfile() {
+    try { return JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch (e) { return null; }
+  }
+  function loadPosts() {
+    try { return JSON.parse(localStorage.getItem(POSTS_KEY)) || []; } catch (e) { return []; }
+  }
+
+  /* --- 写真アップロード（canvasで縮小してdataURL化） --- */
+  function wireUploader(upId, fileId, setPhoto) {
+    var up = document.getElementById(upId);
+    var fi = document.getElementById(fileId);
+    if (!up || !fi) return;
+    up.addEventListener("click", function () { fi.click(); });
+    fi.addEventListener("change", function () {
+      var f = fi.files[0];
+      if (!f) return;
+      var url = URL.createObjectURL(f);
+      var img = new Image();
+      img.onload = function () {
+        var max = 900;
+        var scale = Math.min(1, max / Math.max(img.width, img.height));
+        var c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        var data = c.toDataURL("image/jpeg", 0.8);
+        URL.revokeObjectURL(url);
+        up.classList.add("has-img");
+        up.style.backgroundImage = "url(" + data + ")";
+        setPhoto(data);
+      };
+      img.src = url;
+    });
+  }
+  wireUploader("up-before", "file-before", function (d) { photoBefore = d; });
+  wireUploader("up-after", "file-after", function (d) { photoAfter = d; });
+
+  function resetPostForm() {
+    photoBefore = null;
+    photoAfter = null;
+    ["up-before", "up-after"].forEach(function (id) {
+      var up = document.getElementById(id);
+      up.classList.remove("has-img");
+      up.style.backgroundImage = "";
+    });
+    ["file-before", "file-after"].forEach(function (id) {
+      document.getElementById(id).value = "";
+    });
+  }
+
+  /* --- 投稿カード生成 --- */
+  function makePostCard(post) {
+    var p = loadProfile() || {};
+    var card = document.createElement("article");
+    card.className = "case-card user-post";
+    function side(imgData, label, fallback) {
+      if (imgData) {
+        return '<div class="side" style="background-image:url(' + imgData + ');background-size:cover;background-position:center;color:transparent;">' + label + '</div>';
+      }
+      return '<div class="side ' + fallback + '">' + label + '</div>';
+    }
+    var recipeLine = esc((post.recipe || "").split("\n").filter(Boolean).join(" / "));
+    card.innerHTML =
+      '<div class="before-after">' +
+        side(post.before, "BEFORE", "gray") +
+        side(post.after, "AFTER", "ash") +
+        '<div class="divider"></div>' +
+      '</div>' +
+      '<div class="case-body">' +
+        '<div class="case-title">' + esc(post.title) + '</div>' +
+        '<div class="case-meta">' +
+          (post.base ? '<span class="tag">' + esc(post.base) + '</span>' : '') +
+          (post.maker ? '<span class="tag accent">' + esc(post.maker) + '</span>' : '') +
+        '</div>' +
+        (recipeLine ? '<div class="case-recipe">' + recipeLine + '</div>' : '') +
+        '<div class="case-author">' +
+          '<div class="avatar"></div>' +
+          '<span>' + esc(p.name || "あなた") + (p.salon ? " · " + esc(p.salon) : "") + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="action-bar">' +
+        '<button class="act like" data-count="0"><span class="ico">♡</span><span class="n">0</span></button>' +
+        '<button class="act"><span class="ico">💬</span>0</button>' +
+        '<button class="act save save-btn"><span class="ico">◇</span>保存</button>' +
+      '</div>';
+    wireLike(card.querySelector(".act.like"));
+    wireSave(card.querySelector(".save-btn"));
+    return card;
+  }
+
+  /* --- 投稿の描画（ホーム先頭 + マイページ） --- */
+  function renderHomePosts() {
+    var list = document.getElementById("home-list");
+    if (!list) return;
+    list.querySelectorAll(".user-post").forEach(function (el) { el.remove(); });
+    var posts = loadPosts(); // 新しい順で保存されている
+    for (var i = posts.length - 1; i >= 0; i--) {
+      list.insertBefore(makePostCard(posts[i]), list.firstChild);
+    }
+  }
+
+  function renderMyPosts() {
+    if (!loadProfile()) return; // 未登録時はサンプルのまま
+    var list = document.getElementById("me-post-list");
+    if (!list) return;
+    list.innerHTML = "";
+    var posts = loadPosts();
+    if (!posts.length) {
+      list.innerHTML = '<div class="empty-note">まだ投稿がありません。<br>下タブの「投稿」から最初の施術事例を残しましょう。</div>';
+      return;
+    }
+    posts.forEach(function (post) { list.appendChild(makePostCard(post)); });
+  }
+
+  function renderProfile() {
+    var p = loadProfile();
+    if (!p) return;
+    var me = document.querySelector('[data-screen="me"]');
+    me.querySelector(".p-name").textContent = p.name;
+    var roleParts = [];
+    if (p.role) roleParts.push(p.role);
+    if (p.salon) roleParts.push(p.salon);
+    me.querySelector(".p-role").textContent = roleParts.join(" · ") || "STYLIST";
+    me.querySelector(".p-bio").textContent = p.bio || "";
+    var tiles = me.querySelectorAll(".stat-tile .v");
+    tiles[0].textContent = loadPosts().length;
+    tiles[1].textContent = "0";
+    tiles[2].textContent = "0";
+    tiles[3].textContent = "0";
+  }
+
+  /* --- 投稿の確定 --- */
+  function submitPost() {
+    if (!photoBefore && !photoAfter) {
+      showToast("写真を追加してください");
+      formStep = 1;
+      renderStep();
+      return;
+    }
+    var title = (document.getElementById("f-title").value || "").trim();
+    if (!title) {
+      showToast("タイトルを入力してください");
+      return;
+    }
+    var post = {
+      title: title,
+      base: document.getElementById("f-base").value,
+      maker: Array.prototype.map.call(
+        document.querySelectorAll("#f-maker label.on"),
+        function (l) { return l.textContent.trim(); }
+      ).join(" / "),
+      recipe: document.getElementById("f-recipe").value,
+      before: photoBefore,
+      after: photoAfter,
+      ts: Date.now()
+    };
+    var posts = loadPosts();
+    posts.unshift(post);
+    try {
+      localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+    } catch (e) {
+      showToast("保存容量が足りません（古い投稿を削除してください）");
+      return;
+    }
+    renderHomePosts();
+    renderMyPosts();
+    renderProfile();
+    resetPostForm();
+    showToast("投稿しました ✓");
+    formStep = 1;
+    renderStep();
+    setTimeout(function () { navigate("home"); }, 900);
+  }
+
+  /* --- アカウント作成 / 編集 --- */
+  var suSubmit = document.getElementById("su-submit");
+  suSubmit.addEventListener("click", function () {
+    var name = (document.getElementById("su-name").value || "").trim();
+    if (!name) {
+      showToast("名前を入力してください");
+      return;
+    }
+    var profile = {
+      name: name,
+      salon: (document.getElementById("su-salon").value || "").trim(),
+      role: (document.getElementById("su-role").value || "").trim(),
+      bio: (document.getElementById("su-bio").value || "").trim()
+    };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    renderProfile();
+    renderMyPosts();
+    showToast("アカウントを作成しました ✓");
+    navigate("home");
+  });
+
+  /* マイページの⚙からプロフィール編集 */
+  document.getElementById("btn-edit-profile").addEventListener("click", function () {
+    var p = loadProfile();
+    if (p) {
+      document.getElementById("su-name").value = p.name || "";
+      document.getElementById("su-salon").value = p.salon || "";
+      document.getElementById("su-role").value = p.role || "";
+      document.getElementById("su-bio").value = p.bio || "";
+      suSubmit.textContent = "保存する";
+    }
+    navigate("signup");
+  });
+
+  /* --- 起動時: 未登録ならアカウント作成へ、登録済みなら反映 --- */
+  if (loadProfile()) {
+    renderProfile();
+    renderMyPosts();
+    renderHomePosts();
+  } else {
+    navigate("signup");
+  }
+
+  /* ================================================================
+     ステータスバー時計をリアルタイムに（雰囲気だけ）
+     ================================================================ */
+  function updateClock() {
+    var now = new Date();
+    var h = now.getHours();
+    var m = String(now.getMinutes()).padStart(2, "0");
+    document.querySelectorAll(".status-bar span:first-child").forEach(function (s) {
+      s.textContent = h + ":" + m;
+    });
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
+
+})();
+</script>
+
+</body>
+</html>

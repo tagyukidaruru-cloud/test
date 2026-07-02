@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-I",
+        "-c",
+        "import functools; from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer; handler = functools.partial(SimpleHTTPRequestHandler, directory='/private/tmp/claude-501/-Users-uuto-Downloads-test/35a4b5a1-48bd-46ca-b1b1-91d7b15d7d74/scratchpad/preview'); ThreadingHTTPServer(('127.0.0.1', 4173), handler).serve_forever()"
+      ],
+      "port": 4173
+    }
+  ]
+}

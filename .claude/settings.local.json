@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open \"/Users/yuu_design2022/Downloads/test/new-folder/design-mock.html\")",
+      "Bash(open \"/Users/yuu_design2022/Downloads/test/new-folder/prototype.html\")",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(brew install *)",
+      "Bash(mkdir -p ~/bin)",
+      "Bash(curl -sL https://api.github.com/repos/cli/cli/releases/latest)",
+      "Bash(curl -sL -o gh.tar.gz https://github.com/cli/cli/releases/download/v2.95.0/gh_2.95.0_macOS_arm64.zip)",
+      "Bash(mv gh.tar.gz gh.zip)",
+      "Bash(unzip -q gh.zip)",
+      "Bash(cp /private/tmp/claude-501/-Users-uuto-Downloads-test/4b3576e9-22fc-4575-a802-93a37f05fcc4/scratchpad/gh_2.95.0_macOS_arm64/bin/gh ~/bin/gh)",
+      "Bash(chmod +x ~/bin/gh)",
+      "Bash(~/bin/gh --version)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

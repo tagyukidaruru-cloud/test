@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>じゃんけんゲーム</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-1: #0f0c29;
+    --bg-2: #302b63;
+    --bg-3: #24243e;
+    --accent: #ff6b9d;
+    --accent-2: #a78bfa;
+    --win: #34d399;
+    --lose: #f87171;
+    --draw: #fbbf24;
+    --text: #f8fafc;
+    --muted: rgba(248, 250, 252, 0.6);
+    --card: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 255, 255, 0.12);
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Hiragino Sans', 'ヒラギノ角ゴシック', 'Yu Gothic', 'メイリオ', sans-serif;
+    color: var(--text);
+    background: linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--bg-3));
+    background-size: 300% 300%;
+    animation: bgShift 18s ease infinite;
+    overflow: hidden;
+  }
+
+  @keyframes bgShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 24px;
+    padding: 32px 24px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+  }
+
+  h1 {
+    font-size: clamp(24px, 5vw, 34px);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+  }
+
+  .scoreboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px;
+    backdrop-filter: blur(10px);
+  }
+
+  .score {
+    text-align: center;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
+  .score .label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .score .value {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .score.win .value { color: var(--win); }
+  .score.lose .value { color: var(--lose); }
+  .score.draw .value { color: var(--draw); }
+
+  main {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 20px;
+    min-height: 0;
+  }
+
+  .arena {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    min-height: 0;
+  }
+
+  .player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .player .name {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .hand {
+    font-size: clamp(60px, 15vw, 96px);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(96px, 22vw, 140px);
+    height: clamp(96px, 22vw, 140px);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--border);
+    transition: transform 0.25s ease, background 0.25s ease;
+  }
+
+  .hand.shake {
+    animation: shake 0.4s ease-in-out 3;
+  }
+
+  .hand.reveal {
+    animation: pop 0.3s ease-out;
+    background: linear-gradient(135deg, rgba(255,107,157,0.18), rgba(167,139,250,0.18));
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    25% { transform: translateY(-12px) rotate(-8deg); }
+    75% { transform: translateY(-12px) rotate(8deg); }
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .vs {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .result {
+    text-align: center;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .result-text {
+    font-size: clamp(20px, 5vw, 28px);
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .result-text.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .result-text.win { color: var(--win); border-color: rgba(52,211,153,0.4); }
+  .result-text.lose { color: var(--lose); border-color: rgba(248,113,113,0.4); }
+  .result-text.draw { color: var(--draw); border-color: rgba(251,191,36,0.4); }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .choice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+    backdrop-filter: blur(10px);
+    font-family: inherit;
+    color: inherit;
+  }
+
+  .choice:hover:not(:disabled) {
+    transform: translateY(-4px);
+    background: rgba(255,255,255,0.14);
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  .choice:active:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .choice:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .choice .emoji {
+    font-size: clamp(36px, 8vw, 48px);
+    line-height: 1;
+  }
+
+  .choice .label {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  footer {
+    display: flex;
+    justify-content: center;
+  }
+
+  .reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 10px 24px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .reset:hover {
+    color: var(--text);
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  @media (max-width: 480px) {
+    .app { padding: 20px 16px; gap: 16px; }
+    .arena { padding: 16px 12px; }
+    .vs { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>じゃんけんゲーム</h1>
+      <p class="subtitle">ROCK · PAPER · SCISSORS</p>
+      <div class="scoreboard">
+        <div class="score win">
+          <div class="label">Win</div>
+          <div class="value" id="score-win">0</div>
+        </div>
+        <div class="score draw">
+          <div class="label">Draw</div>
+          <div class="value" id="score-draw">0</div>
+        </div>
+        <div class="score lose">
+          <div class="label">Lose</div>
+          <div class="value" id="score-lose">0</div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="arena">
+        <div class="player">
+          <div class="name">You</div>
+          <div class="hand" id="hand-player">✊</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="player">
+          <div class="name">CPU</div>
+          <div class="hand" id="hand-cpu">✊</div>
+        </div>
+      </div>
+
+      <div class="result">
+        <div class="result-text" id="result">手をえらんでね</div>
+      </div>
+    </main>
+
+    <div class="controls">
+      <button class="choice" data-choice="rock" aria-label="グー">
+        <span class="emoji">✊</span>
+        <span class="label">グー</span>
+      </button>
+      <button class="choice" data-choice="scissors" aria-label="チョキ">
+        <span class="emoji">✌️</span>
+        <span class="label">チョキ</span>
+      </button>
+      <button class="choice" data-choice="paper" aria-label="パー">
+        <span class="emoji">✋</span>
+        <span class="label">パー</span>
+      </button>
+    </div>
+
+    <footer>
+      <button class="reset" id="reset">スコアをリセット</button>
+    </footer>
+  </div>
+
+<script>
+  const EMOJI = { rock: '✊', scissors: '✌️', paper: '✋' };
+  const CHOICES = ['rock', 'scissors', 'paper'];
+
+  const handPlayer = document.getElementById('hand-player');
+  const handCpu = document.getElementById('hand-cpu');
+  const resultEl = document.getElementById('result');
+  const scoreWin = document.getElementById('score-win');
+  const scoreDraw = document.getElementById('score-draw');
+  const scoreLose = document.getElementById('score-lose');
+  const choices = document.querySelectorAll('.choice');
+  const resetBtn = document.getElementById('reset');
+
+  let score = { win: 0, draw: 0, lose: 0 };
+  let isPlaying = false;
+
+  function judge(player, cpu) {
+    if (player === cpu) return 'draw';
+    if (
+      (player === 'rock' && cpu === 'scissors') ||
+      (player === 'scissors' && cpu === 'paper') ||
+      (player === 'paper' && cpu === 'rock')
+    ) return 'win';
+    return 'lose';
+  }
+
+  function updateScoreboard() {
+    scoreWin.textContent = score.win;
+    scoreDraw.textContent = score.draw;
+    scoreLose.textContent = score.lose;
+  }
+
+  function setResult(kind) {
+    resultEl.classList.remove('win', 'lose', 'draw', 'show');
+    if (kind === 'win') resultEl.textContent = 'かった〜！🎉';
+    else if (kind === 'lose') resultEl.textContent = 'まけた…😢';
+    else if (kind === 'draw') resultEl.textContent = 'あいこ！';
+    resultEl.classList.add(kind);
+    // 次フレームでshowアニメーションを発火
+    requestAnimationFrame(() => resultEl.classList.add('show'));
+  }
+
+  async function play(playerChoice) {
+    if (isPlaying) return;
+    isPlaying = true;
+    choices.forEach(c => c.disabled = true);
+
+    // シェイクアニメーション
+    handPlayer.classList.remove('reveal');
+    handCpu.classList.remove('reveal');
+    handPlayer.classList.add('shake');
+    handCpu.classList.add('shake');
+    resultEl.classList.remove('show');
+    resultEl.textContent = 'じゃんけん…';
+
+    // シェイク中に手を切り替える演出
+    let tick = 0;
+    const shuffleId = setInterval(() => {
+      const p = CHOICES[tick % 3];
+      const c = CHOICES[(tick + 1) % 3];
+      handPlayer.textContent = EMOJI[p];
+      handCpu.textContent = EMOJI[c];
+      tick++;
+    }, 120);
+
+    await new Promise(r => setTimeout(r, 1200));
+    clearInterval(shuffleId);
+
+    // 結果確定
+    const cpuChoice = CHOICES[Math.floor(Math.random() * 3)];
+    handPlayer.textContent = EMOJI[playerChoice];
+    handCpu.textContent = EMOJI[cpuChoice];
+    handPlayer.classList.remove('shake');
+    handCpu.classList.remove('shake');
+    handPlayer.classList.add('reveal');
+    handCpu.classList.add('reveal');
+
+    const outcome = judge(playerChoice, cpuChoice);
+    score[outcome]++;
+    updateScoreboard();
+    setResult(outcome);
+
+    await new Promise(r => setTimeout(r, 300));
+    choices.forEach(c => c.disabled = false);
+    isPlaying = false;
+  }
+
+  choices.forEach(btn => {
+    btn.addEventListener('click', () => play(btn.dataset.choice));
+  });
+
+  resetBtn.addEventListener('click', () => {
+    score = { win: 0, draw: 0, lose: 0 };
+    updateScoreboard();
+    resultEl.classList.remove('show', 'win', 'lose', 'draw');
+    resultEl.textContent = '手をえらんでね';
+    handPlayer.textContent = '✊';
+    handCpu.textContent = '✊';
+    handPlayer.classList.remove('reveal');
+    handCpu.classList.remove('reveal');
+  });
+
+  // キーボードショートカット: 1=グー, 2=チョキ, 3=パー
+  document.addEventListener('keydown', e => {
+    if (e.key === '1') play('rock');
+    else if (e.key === '2') play('scissors');
+    else if (e.key === '3') play('paper');
+  });
+</script>
+</body>
+</html>
