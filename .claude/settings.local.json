@@ -30,7 +30,8 @@
       "Bash(rm -f /Users/uuto/Downloads/test/.claude/scripts/.testfile)",
       "Bash(git rm *)",
       "Bash(echo \"recheck2 $\\(date\\)\")",
-      "Bash(env -i HOME=/Users/uuto /bin/zsh /Users/uuto/Downloads/test/.claude/scripts/autocommit.sh)"
+      "Bash(env -i HOME=/Users/uuto /bin/zsh /Users/uuto/Downloads/test/.claude/scripts/autocommit.sh)",
+      "Bash(rm -f /Users/uuto/Downloads/test/.claude/scripts/.testfile2)"
     ]
   }
 }
