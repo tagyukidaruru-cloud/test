@@ -216,6 +216,7 @@ a { color: inherit; text-decoration: none; }
   padding-bottom: calc(var(--tabbar-h) + 12px);
 }
 .screen-body.no-tabbar { padding-bottom: 20px; }
+[data-screen="new"] .form-step { padding-bottom: 40px; }
 
 @media (max-width: 480px) {
   .screen-body { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 4px); }
@@ -1389,6 +1390,43 @@ a { color: inherit; text-decoration: none; }
   font-size: 0;
 }
 
+.group-panel {
+  margin: 0 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.gp-head {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+.gp-head b { font-family: var(--font-mono); font-size: 16px; margin: 0 2px; }
+.gp-admin { display: flex; gap: 6px; }
+.gp-admin button, .gp-remove {
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.gp-admin button.danger, .gp-remove { color: #b4433a; border-color: #d8b5b1; }
+.gp-member {
+  padding: 10px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+.gp-member:last-child { border-bottom: 0; }
+
 .form-actions {
   position: sticky;
   bottom: 0;
@@ -2140,13 +2178,13 @@ a { color: inherit; text-decoration: none; }
          ================================================================ -->
     <div class="tabbar" id="tabbar">
       <button class="tab active" data-nav="home"><span class="ico">◐</span><span>ホーム</span></button>
-      <button class="tab" data-nav="search"><span class="ico">⌕</span><span>検索</span></button>
+      <button class="tab" data-nav="search"><span class="ico" style="font-size:22px;">⌕</span><span>検索</span></button>
       <button class="tab center" data-nav="new">
         <div class="fab">+</div>
         <span class="lbl">投稿</span>
       </button>
-      <button class="tab" data-nav="fav"><span class="ico">♡</span><span>保存</span></button>
-      <button class="tab" data-nav="me"><span class="ico">◇</span><span>マイ</span></button>
+      <button class="tab" data-nav="fav"><span class="ico">📖</span><span>保存</span></button>
+      <button class="tab" data-nav="me"><span class="ico">✂️</span><span>マイ</span></button>
     </div>
 
     <!-- トースト -->
@@ -2839,7 +2877,10 @@ a { color: inherit; text-decoration: none; }
     return sb("POST", "groups?on_conflict=id", { id: g.id, name: g.name, owner_id: g.ownerId, members: g.members, pending: g.pending }).catch(apiFail);
   }
   function apiPatchGroup(g) {
-    return sb("PATCH", "groups?id=eq." + g.id, { members: g.members, pending: g.pending }).catch(apiFail);
+    return sb("PATCH", "groups?id=eq." + g.id, { name: g.name, members: g.members, pending: g.pending }).catch(apiFail);
+  }
+  function apiDeleteGroup(id) {
+    return sb("DELETE", "groups?id=eq." + id).catch(apiFail);
   }
 
   /* アカウント情報を端末に保存（サイトを閉じてもログイン状態を保つ） */
@@ -3246,10 +3287,24 @@ a { color: inherit; text-decoration: none; }
         '</div>' +
         (post.note ? '<div class="detail-section"><h3><span class="num">02</span>髪の状態</h3><p>' + esc(post.note) + '</p></div>' : '') +
         (post.recipe ? '<div class="detail-section"><h3><span class="num">03</span>レシピ</h3><p style="font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;">' + esc(post.recipe) + '</p></div>' : '') +
+        '<div class="case-card" data-post-id="' + post.ts + '" style="border:0;background:none;padding:0;margin-top:8px;">' +
+          '<div class="action-bar">' +
+            '<button class="act like" data-count="0"><span class="ico">♡</span><span class="n">0</span></button>' +
+            '<button class="act save save-btn"><span class="ico">◇</span>保存</button>' +
+          '</div>' +
+        '</div>' +
       '</div>';
     var modal = document.querySelector('[data-screen="detail"]');
     modal.classList.add("active");
     document.getElementById("tabbar").classList.add("hidden");
+
+    var likeB = detailBody.querySelector(".act.like");
+    var saveB = detailBody.querySelector(".save-btn");
+    wireLike(likeB); wireSave(saveB);
+    if (cur) {
+      var sid = "sample-";
+      setSaveBtn(saveB, DB.saves.some(function (s) { return s.accountId === cur.id && s.id === String(post.ts); }));
+    }
 
     var fb = document.getElementById("detail-follow");
     if (fb) {
@@ -3376,8 +3431,7 @@ a { color: inherit; text-decoration: none; }
           (String(g.ownerId) === String(curG.id) ? ' <span style="font-size:10px;color:var(--ink-3);">(管理者)</span>' : '') +
           '</span><span class="cnt">' + groupPosts(g).length + ' 投稿 →</span>';
         b.addEventListener("click", function () {
-          renderSearchResults(groupPosts(g), "グループ: " + g.name);
-          navigate("search-result");
+          openGroupPage(g);
         });
         list.appendChild(b);
       });
@@ -3647,6 +3701,44 @@ a { color: inherit; text-decoration: none; }
     });
   }
 
+  function openGroupPage(g) {
+    renderSearchResults(groupPosts(g), "グループ: " + g.name);
+    var cur = currentAccount();
+    var isAdmin = cur && String(g.ownerId) === String(cur.id);
+    var panel = document.createElement("div");
+    panel.className = "group-panel";
+    var head = '<div class="gp-head">メンバー <b>' + g.members.length + '</b> 人' +
+      (isAdmin ? '<span class="gp-admin"><button id="gp-rename">名称変更</button><button id="gp-del" class="danger">削除</button></span>' : '') +
+      '</div>';
+    var rows = g.members.map(function (mid) {
+      var nm = accountName(mid) + (String(mid) === String(g.ownerId) ? "（管理者）" : "");
+      var rm = (isAdmin && String(mid) !== String(g.ownerId)) ? '<button class="gp-remove" data-mid="' + mid + '">削除</button>' : '';
+      return '<div class="gp-member"><span>' + esc(nm) + '</span>' + rm + '</div>';
+    }).join("");
+    panel.innerHTML = head + '<div class="gp-members">' + rows + '</div>';
+    var list = document.getElementById("result-list");
+    list.insertBefore(panel, list.firstChild);
+    navigate("search-result");
+    if (isAdmin) {
+      document.getElementById("gp-rename").addEventListener("click", function () {
+        var nn = prompt("新しいグループ名", g.name);
+        if (nn && nn.trim()) { g.name = nn.trim(); apiPatchGroup(g); renderGroups(); openGroupPage(g); showToast("変更しました ✓"); }
+      });
+      document.getElementById("gp-del").addEventListener("click", function () {
+        if (!confirm("グループ「" + g.name + "」を削除しますか？")) return;
+        DB.groups = DB.groups.filter(function (x) { return x.id !== g.id; });
+        apiDeleteGroup(g.id); renderGroups(); navigate("me"); showToast("グループを削除しました");
+      });
+      panel.querySelectorAll(".gp-remove").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var mid = Number(btn.dataset.mid);
+          g.members = g.members.filter(function (m) { return m !== mid; });
+          apiPatchGroup(g); openGroupPage(g); showToast("メンバーを削除しました");
+        });
+      });
+    }
+  }
+
   function renderGroups() {
     var cur = currentAccount();
     var listEl = document.getElementById("my-group-list");
@@ -3668,8 +3760,7 @@ a { color: inherit; text-decoration: none; }
         (String(g.ownerId) === String(cur.id) ? ' <span style="font-size:10px;color:var(--ink-3);">(管理者)</span>' : '') +
         '</span><span class="cnt">' + groupPosts(g).length + ' 投稿 →</span>';
       b.addEventListener("click", function () {
-        renderSearchResults(groupPosts(g), "グループ: " + g.name);
-        navigate("search-result");
+        openGroupPage(g);
       });
       listEl.appendChild(b);
     });
