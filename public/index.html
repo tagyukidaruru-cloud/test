@@ -898,7 +898,8 @@ a { color: inherit; text-decoration: none; }
 }
 .grid-tile:active { transform: scale(0.97); }
 .grid-tile .g-thumb {
-  height: 96px;
+  aspect-ratio: 1 / 1;
+  width: 100%;
   background: linear-gradient(160deg, #b8b0a6 0%, #6a625a 100%);
   background-size: cover;
   background-position: center;
@@ -906,11 +907,11 @@ a { color: inherit; text-decoration: none; }
 .grid-tile .g-thumb.split { display: flex; }
 .grid-tile .g-thumb.split > div {
   flex: 1;
+  min-width: 0;
   background-size: cover;
   background-position: center;
 }
 .grid-tile .g-thumb.split > div + div { border-left: 1px solid rgba(255,255,255,0.5); }
-.grid-list.large .g-thumb { height: 200px; }
 .grid-tile .g-body { padding: 8px 10px 10px; }
 .grid-tile .g-title {
   font-size: 11px;
