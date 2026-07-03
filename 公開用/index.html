@@ -1391,6 +1391,21 @@ a { color: inherit; text-decoration: none; }
   font-size: 0;
 }
 
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.detail-acts {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  padding-top: 2px;
+}
+.detail-acts .act { font-size: 15px; }
+.detail-acts .act .ico { font-size: 22px; }
+
 .group-panel {
   margin: 0 12px 12px;
   border: 1px solid var(--line);
@@ -3268,7 +3283,13 @@ a { color: inherit; text-decoration: none; }
         '<div class="divider"></div>' +
       '</div>' +
       '<div class="detail-body">' +
-        '<h1 class="detail-title">' + esc(post.title) + '</h1>' +
+        '<div class="detail-title-row case-card" data-post-id="' + post.ts + '">' +
+          '<h1 class="detail-title">' + esc(post.title) + '</h1>' +
+          '<div class="action-bar detail-acts">' +
+            '<button class="act like" data-count="0"><span class="ico">♡</span><span class="n">0</span></button>' +
+            '<button class="act save save-btn"><span class="ico">◇</span></button>' +
+          '</div>' +
+        '</div>' +
         '<div class="detail-author-row">' +
           '<div class="avatar"' + (av ? ' style="background-image:url(' + av + ');"' : '') + '></div>' +
           '<div style="flex:1;">' +
@@ -3288,12 +3309,6 @@ a { color: inherit; text-decoration: none; }
         '</div>' +
         (post.note ? '<div class="detail-section"><h3><span class="num">02</span>髪の状態</h3><p>' + esc(post.note) + '</p></div>' : '') +
         (post.recipe ? '<div class="detail-section"><h3><span class="num">03</span>レシピ</h3><p style="font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;">' + esc(post.recipe) + '</p></div>' : '') +
-        '<div class="case-card" data-post-id="' + post.ts + '" style="border:0;background:none;padding:0;margin-top:8px;">' +
-          '<div class="action-bar">' +
-            '<button class="act like" data-count="0"><span class="ico">♡</span><span class="n">0</span></button>' +
-            '<button class="act save save-btn"><span class="ico">◇</span>保存</button>' +
-          '</div>' +
-        '</div>' +
       '</div>';
     var modal = document.querySelector('[data-screen="detail"]');
     modal.classList.add("active");
