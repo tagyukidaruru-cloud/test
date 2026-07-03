@@ -1403,7 +1403,7 @@ a { color: inherit; text-decoration: none; }
 .detail-acts .act { font-size: 14px; }
 .detail-acts .act .ico { font-size: 22px; }
 .detail-acts .act.on { color: var(--accent); }
-.detail-acts .act.like.on .ico { color: #e0405e; }
+.detail-acts .act.like.on .ico { color: #f4a6c0; }
 
 .group-panel {
   margin: 0 12px 12px;
@@ -2625,11 +2625,14 @@ a { color: inherit; text-decoration: none; }
       btn.classList.add("pop");
       setTimeout(function () { btn.classList.remove("pop"); }, 300);
       var n = btn.querySelector(".n");
+      var ico = btn.querySelector(".ico");
       if (btn.classList.contains("on")) {
         n.textContent = base + 1;
+        if (ico) ico.textContent = "♥";
         popHeart(btn);
       } else {
         n.textContent = base;
+        if (ico) ico.textContent = "♡";
       }
     });
   }
