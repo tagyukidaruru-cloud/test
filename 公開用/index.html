@@ -177,6 +177,7 @@ a { color: inherit; text-decoration: none; }
   font-size: 16px;
   color: var(--ink);
 }
+.app-header .back[hidden] { display: none; }
 .app-header .title {
   font-family: var(--font-heading);
   font-size: 18px;
@@ -902,6 +903,13 @@ a { color: inherit; text-decoration: none; }
   background-size: cover;
   background-position: center;
 }
+.grid-tile .g-thumb.split { display: flex; }
+.grid-tile .g-thumb.split > div {
+  flex: 1;
+  background-size: cover;
+  background-position: center;
+}
+.grid-tile .g-thumb.split > div + div { border-left: 1px solid rgba(255,255,255,0.5); }
 .grid-list.large .g-thumb { height: 200px; }
 .grid-tile .g-body { padding: 8px 10px 10px; }
 .grid-tile .g-title {
@@ -3378,12 +3386,22 @@ a { color: inherit; text-decoration: none; }
   function makeGridTile(post) {
     var b = document.createElement("button");
     b.className = "grid-tile";
-    var img = post.after || post.before;
+    var thumb;
+    if (post.before && post.after) {
+      // before/after 左右2分割
+      thumb = '<div class="g-thumb split">' +
+        '<div style="background-image:url(' + post.before + ');"></div>' +
+        '<div style="background-image:url(' + post.after + ');"></div>' +
+      '</div>';
+    } else {
+      var img = post.after || post.before;
+      thumb = '<div class="g-thumb"' + (img ? ' style="background-image:url(' + img + ');"' : '') + '></div>';
+    }
     var badges = "";
     if (post.visibility === "group") badges += '<span class="g-badge">グループ</span>';
     if (post.visibility === "draft") badges += '<span class="g-badge">下書き</span>';
     b.innerHTML =
-      '<div class="g-thumb"' + (img ? ' style="background-image:url(' + img + ');"' : '') + '></div>' +
+      thumb +
       '<div class="g-body">' +
         '<div class="g-title">' + esc(post.title) + badges + '</div>' +
         '<div class="g-author">' + esc(post.author ? post.author.name : "") + '</div>' +
