@@ -965,6 +965,8 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
   position: relative;
 }
+#user-avatar::after { display: none; }
+.author-tap { cursor: pointer; }
 .p-avatar::after {
   content: "📷";
   position: absolute;
@@ -1921,6 +1923,7 @@ a { color: inherit; text-decoration: none; }
                   <label><span class="box"></span>カラー</label>
                   <label><span class="box"></span>縮毛矯正</label>
                   <label><span class="box"></span>パーマ</label>
+                  <label><span class="box"></span>その他</label>
                 </div>
               </div>
               <div class="field">
@@ -2137,6 +2140,33 @@ a { color: inherit; text-decoration: none; }
             </article>
           </div>
 
+        </div>
+      </div>
+
+      <!-- ================================================================
+           ユーザープロフィール（他人）
+           ================================================================ -->
+      <div class="screen" data-screen="user">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="right">100%</span>
+        </div>
+        <div class="app-header">
+          <button class="back" data-nav="home">←</button>
+          <div class="title">プロフィール</div>
+        </div>
+        <div class="screen-body">
+          <div class="profile-header">
+            <div class="p-avatar" id="user-avatar" style="cursor:default;"></div>
+            <div class="p-name" id="user-name"></div>
+            <div class="p-bio" id="user-bio"></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-tile"><div class="v" id="user-posts">0</div><div class="k">POSTS</div></div>
+            <div class="stat-tile"><div class="v" id="user-likes">0</div><div class="k">LIKES</div></div>
+            <div class="stat-tile"><div class="v" id="user-followers">0</div><div class="k">FOLLOWERS</div></div>
+          </div>
+          <div class="case-list" id="user-post-list"></div>
         </div>
       </div>
 
@@ -3263,6 +3293,68 @@ a { color: inherit; text-decoration: none; }
     renderProfile();
   }
 
+  /* --- いいね（saves の __like__ レコードで永続化） --- */
+  function likeCountFor(ts) {
+    return DB.saves.filter(function (s) { return s.id === "__like__" + ts; }).length;
+  }
+  function isLiked(ts) {
+    var cur = currentAccount();
+    if (!cur) return false;
+    return DB.saves.some(function (s) { return s.accountId === cur.id && s.id === "__like__" + ts; });
+  }
+  function toggleLike(ts) {
+    var cur = currentAccount();
+    if (!cur) return;
+    var id = "__like__" + ts;
+    if (isLiked(ts)) {
+      DB.saves = DB.saves.filter(function (s) { return !(s.accountId === cur.id && s.id === id); });
+      apiDeleteSave(cur.id, id);
+    } else {
+      var entry = { accountId: cur.id, id: id, title: "", author: "", bg: "" };
+      DB.saves.push(entry);
+      apiAddSave(entry);
+    }
+    renderProfile();
+  }
+  function totalLikesForAccount(accId) {
+    var mine = DB.posts.filter(function (p) { return p.accountId === accId; }).map(function (p) { return p.ts; });
+    return DB.saves.filter(function (s) {
+      return s.id.indexOf("__like__") === 0 && mine.indexOf(Number(s.id.slice(8))) !== -1;
+    }).length;
+  }
+  function followerCount(accId) {
+    return DB.saves.filter(function (s) { return s.id === "__follow__" + accId; }).length;
+  }
+
+  /* --- 他人のプロフィール表示 --- */
+  function openUserProfile(accId) {
+    var acc = null;
+    DB.accounts.forEach(function (a) { if (String(a.id) === String(accId)) acc = a; });
+    if (!acc) return;
+    var av = avatarFor(acc.id);
+    var scr = document.querySelector('[data-screen="user"]');
+    scr.querySelector("#user-avatar").style.backgroundImage = av ? "url(" + av + ")" : "";
+    scr.querySelector("#user-name").textContent = acc.name + (acc.role ? " @" + acc.role : "");
+    scr.querySelector("#user-bio").textContent = acc.bio || "";
+    var posts = DB.posts.filter(function (p) {
+      return p.accountId === acc.id && (!p.visibility || p.visibility === "public");
+    });
+    scr.querySelector("#user-posts").textContent = posts.length;
+    scr.querySelector("#user-likes").textContent = totalLikesForAccount(acc.id);
+    scr.querySelector("#user-followers").textContent = followerCount(acc.id);
+    var list = scr.querySelector("#user-post-list");
+    list.innerHTML = "";
+    if (!posts.length) {
+      list.innerHTML = '<div class="empty-note">まだ投稿がありません。</div>';
+    } else {
+      var grid = document.createElement("div");
+      grid.className = "grid-list";
+      posts.forEach(function (p) { grid.appendChild(makeGridTile(p)); });
+      list.appendChild(grid);
+    }
+    navigate("user");
+  }
+
   /* 実投稿の詳細表示（サンプル用の詳細モーダルを流用） */
   function openPostDetail(post) {
     var a = post.author || {};
@@ -3287,14 +3379,14 @@ a { color: inherit; text-decoration: none; }
       '<div class="detail-body">' +
         '<h1 class="detail-title">' + esc(post.title) + '</h1>' +
         '<div class="detail-author-row">' +
-          '<div class="avatar"' + (av ? ' style="background-image:url(' + av + ');"' : '') + '></div>' +
-          '<div style="flex:1;">' +
+          '<div class="author-tap" id="detail-author" style="display:flex;align-items:center;gap:10px;flex:1;">' +
+            '<div class="avatar"' + (av ? ' style="background-image:url(' + av + ');"' : '') + '></div>' +
             '<div class="name">' + esc(a.name || "") + '</div>' +
           '</div>' +
           (isOwn ? '' : '<button class="follow-btn' + (isFollowing(post.accountId) ? ' following' : '') + '" id="detail-follow">' + (isFollowing(post.accountId) ? "フォロー中" : "フォロー") + '</button>') +
         '</div>' +
         '<div class="action-bar detail-acts case-card" data-post-id="' + post.ts + '">' +
-          '<button class="act like" data-count="0"><span class="ico">♡</span><span class="n">0</span></button>' +
+          '<button class="act like' + (isLiked(post.ts) ? ' on' : '') + '"><span class="ico">' + (isLiked(post.ts) ? '♥' : '♡') + '</span><span class="n">' + likeCountFor(post.ts) + '</span></button>' +
           '<button class="act save save-btn"><span class="ico">◇</span>保存</button>' +
         '</div>' +
         (isOwn
@@ -3316,10 +3408,25 @@ a { color: inherit; text-decoration: none; }
 
     var likeB = detailBody.querySelector(".act.like");
     var saveB = detailBody.querySelector(".save-btn");
-    wireLike(likeB); wireSave(saveB);
+    wireSave(saveB);
     if (cur) {
-      var sid = "sample-";
       setSaveBtn(saveB, DB.saves.some(function (s) { return s.accountId === cur.id && s.id === String(post.ts); }));
+    }
+    likeB.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleLike(post.ts);
+      var liked = isLiked(post.ts);
+      likeB.classList.toggle("on", liked);
+      likeB.querySelector(".ico").textContent = liked ? "♥" : "♡";
+      likeB.querySelector(".n").textContent = likeCountFor(post.ts);
+      if (liked) popHeart(likeB);
+    });
+    var authorTap = document.getElementById("detail-author");
+    if (authorTap) {
+      authorTap.addEventListener("click", function () {
+        closeDetail();
+        openUserProfile(post.accountId);
+      });
     }
 
     var fb = document.getElementById("detail-follow");
@@ -3564,7 +3671,7 @@ a { color: inherit; text-decoration: none; }
     tiles[0].textContent = loadPosts().filter(function (x) {
       return x.accountId === p.id && x.visibility !== "draft";
     }).length;
-    tiles[1].textContent = "0";
+    tiles[1].textContent = totalLikesForAccount(p.id);
     tiles[2].textContent = mySaves().length;
     // FOLLOW = 自分をフォローしている人数
     tiles[3].textContent = DB.saves.filter(function (s) { return s.id === "__follow__" + p.id; }).length;
