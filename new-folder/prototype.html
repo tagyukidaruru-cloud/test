@@ -879,12 +879,12 @@ a { color: inherit; text-decoration: none; }
 }
 .notif-dot[hidden] { display: none; }
 
-/* グリッド表示（ホーム=小 / マイページ=大） */
+/* グリッド表示（3列で統一） */
 .grid-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding: 0 16px 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 0 12px 16px;
 }
 .grid-tile {
   border-radius: 12px;
@@ -912,17 +912,16 @@ a { color: inherit; text-decoration: none; }
   background-position: center;
 }
 .grid-tile .g-thumb.split > div + div { border-left: 1px solid rgba(255,255,255,0.5); }
-.grid-tile .g-body { padding: 8px 10px 10px; }
+.grid-tile .g-body { padding: 6px 7px 8px; }
 .grid-tile .g-title {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--ink);
-  line-height: 1.4;
+  line-height: 1.35;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.grid-list.large .g-title { font-size: 13px; -webkit-line-clamp: 2; }
 .grid-tile .g-author {
   font-size: 9px;
   color: var(--ink-3);
@@ -931,7 +930,6 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.grid-list.large .g-author { font-size: 10px; }
 .grid-tile .g-badge {
   font-size: 8px;
   color: var(--ink-3);
@@ -2039,6 +2037,7 @@ a { color: inherit; text-decoration: none; }
             <div class="tab-m active">投稿</div>
             <div class="tab-m">下書き</div>
             <div class="tab-m">保存</div>
+            <div class="tab-m">グループ</div>
           </div>
 
           <div class="case-list" id="me-post-list">
@@ -2258,8 +2257,10 @@ a { color: inherit; text-decoration: none; }
       list.innerHTML = '<div class="empty-note">条件に合う投稿がありません。</div>';
       return;
     }
-    posts.forEach(function (p) { list.appendChild(makePostCard(p)); });
-    syncSaveButtons();
+    var grid = document.createElement("div");
+    grid.className = "grid-list";
+    posts.forEach(function (p) { grid.appendChild(makeGridTile(p)); });
+    list.appendChild(grid);
   }
   function runSearch() {
     renderSearchResults(searchMatches(), searchLead());
@@ -3341,7 +3342,7 @@ a { color: inherit; text-decoration: none; }
         return;
       }
       var dgrid = document.createElement("div");
-      dgrid.className = "grid-list large";
+      dgrid.className = "grid-list";
       drafts.forEach(function (p) { dgrid.appendChild(makeGridTile(p)); });
       list.appendChild(dgrid);
       return;
@@ -3357,6 +3358,29 @@ a { color: inherit; text-decoration: none; }
       grid.className = "fav-grid";
       saves.forEach(function (s) { grid.appendChild(makeFavCard(s)); });
       list.appendChild(grid);
+      return;
+    }
+    if (name === "グループ") {
+      var curG = currentAccount();
+      list.innerHTML = "";
+      var mine = curG ? myGroups() : [];
+      if (!mine.length) {
+        list.innerHTML = '<div class="empty-note">参加中のグループはありません。<br>検索ページからグループを作成・参加できます。</div>';
+        return;
+      }
+      mine.forEach(function (g) {
+        var b = document.createElement("button");
+        b.className = "group-item";
+        b.innerHTML =
+          '<span>' + esc(g.name) +
+          (String(g.ownerId) === String(curG.id) ? ' <span style="font-size:10px;color:var(--ink-3);">(管理者)</span>' : '') +
+          '</span><span class="cnt">' + groupPosts(g).length + ' 投稿 →</span>';
+        b.addEventListener("click", function () {
+          renderSearchResults(groupPosts(g), "グループ: " + g.name);
+          navigate("search-result");
+        });
+        list.appendChild(b);
+      });
     }
   }
 
@@ -3452,7 +3476,7 @@ a { color: inherit; text-decoration: none; }
       return;
     }
     var grid = document.createElement("div");
-    grid.className = "grid-list large";
+    grid.className = "grid-list";
     posts.forEach(function (post) { grid.appendChild(makeGridTile(post)); });
     list.appendChild(grid);
   }
