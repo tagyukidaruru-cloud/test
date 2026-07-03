@@ -864,91 +864,6 @@ a { color: inherit; text-decoration: none; }
   .app-header { padding-top: calc(8px + env(safe-area-inset-top, 0px)); }
 }
 
-/* 通知ドット */
-#btn-notif { position: relative; }
-.notif-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #d64541;
-  border: 1.5px solid var(--bg);
-}
-.notif-dot[hidden] { display: none; }
-
-/* グリッド表示（ホーム=小 / マイページ=大） */
-.grid-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding: 0 16px 16px;
-}
-.grid-tile {
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  text-align: left;
-  display: block;
-  width: 100%;
-  padding: 0;
-}
-.grid-tile:active { transform: scale(0.97); }
-.grid-tile .g-thumb {
-  height: 96px;
-  background: linear-gradient(160deg, #b8b0a6 0%, #6a625a 100%);
-  background-size: cover;
-  background-position: center;
-}
-.grid-list.large .g-thumb { height: 200px; }
-.grid-tile .g-body { padding: 8px 10px 10px; }
-.grid-tile .g-title {
-  font-size: 11px;
-  color: var(--ink);
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.grid-list.large .g-title { font-size: 13px; -webkit-line-clamp: 2; }
-.grid-tile .g-author {
-  font-size: 9px;
-  color: var(--ink-3);
-  margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.grid-list.large .g-author { font-size: 10px; }
-.grid-tile .g-badge {
-  font-size: 8px;
-  color: var(--ink-3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  padding: 1px 6px;
-  margin-left: 4px;
-}
-
-/* 詳細画面の操作ボタン（自分の投稿の編集/削除） */
-.detail-own-actions {
-  display: flex;
-  gap: 8px;
-  padding: 4px 0 8px;
-}
-.detail-own-actions button {
-  flex: 1;
-  padding: 11px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 12px;
-}
-.detail-own-actions button.danger { color: #b4433a; border-color: #d8b5b1; }
-
 /* プロフィール写真 */
 .p-avatar {
   background-size: cover;
@@ -1121,27 +1036,6 @@ a { color: inherit; text-decoration: none; }
 .acct-item .nm { font-size: 13px; color: var(--ink); }
 .acct-item .sl { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .acct-item .go { font-size: 11px; color: var(--ink-2); white-space: nowrap; }
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.login-form input {
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  font-size: 14px;
-  background: #fff;
-}
-.login-form button {
-  padding: 13px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: var(--bg);
-  font-size: 13px;
-}
-
 .acct-pw-form {
   display: flex;
   gap: 8px;
@@ -1411,29 +1305,19 @@ a { color: inherit; text-decoration: none; }
 /* 投稿完了トースト */
 .toast {
   position: absolute;
-  top: calc(16px + env(safe-area-inset-top, 0px));
+  top: 70px;
   left: 50%;
-  transform: translateX(-50%) translateY(-250%);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
+  transform: translateX(-50%) translateY(-140%);
   background: var(--ink);
   color: var(--bg);
   padding: 12px 20px;
   border-radius: var(--r-pill);
   font-size: 13px;
-  z-index: 40;
-  transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s;
+  z-index: 20;
+  transition: transform 0.3s ease;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  max-width: 85%;
-  text-align: center;
 }
-.toast.show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
+.toast.show { transform: translateX(-50%) translateY(0); }
 
 /* ================================================================
    お気に入り画面
@@ -1631,10 +1515,6 @@ a { color: inherit; text-decoration: none; }
           <span>9:41</span>
           <span class="right">100%</span>
         </div>
-        <div class="app-header">
-          <button class="back" id="su-back" hidden>←</button>
-          <div class="title"></div>
-        </div>
         <div class="screen-body no-tabbar">
 
           <div class="signup-hero">
@@ -1644,31 +1524,31 @@ a { color: inherit; text-decoration: none; }
 
           <div class="account-section" id="su-accounts" hidden>
             <div class="acct-head">既存のアカウントで続ける</div>
-            <div class="login-form">
-              <input type="text" id="login-name" placeholder="ユーザーID" autocomplete="username">
-              <input type="password" id="login-pw" placeholder="パスワード" autocomplete="current-password">
-              <button id="login-btn">ログイン</button>
-            </div>
+            <div class="acct-list" id="su-account-list"></div>
             <div class="acct-or">— または新しいアカウントを作成 —</div>
           </div>
 
           <div class="form-fieldset">
             <div class="fs-head">PROFILE</div>
             <div class="field">
-              <label>ユーザーID<span class="req">*</span></label>
-              <input type="text" id="su-uid" placeholder="半角英数3文字以上（例: yuto_t）" autocomplete="username">
-            </div>
-            <div class="field">
-              <label>ニックネーム<span class="req">*</span></label>
-              <input type="text" id="su-name" placeholder="例: ゆうと">
+              <label>名前<span class="req">*</span></label>
+              <input type="text" id="su-name" placeholder="例: Yuuki Aizawa">
             </div>
             <div class="field">
               <label>パスワード<span class="req">*</span></label>
               <input type="password" id="su-pw" placeholder="4文字以上" autocomplete="new-password">
             </div>
             <div class="field">
+              <label>サロン名</label>
+              <input type="text" id="su-salon" placeholder="例: SALON TOKYO GINZA">
+            </div>
+            <div class="field">
+              <label>役職</label>
+              <input type="text" id="su-role" placeholder="例: スタイリスト">
+            </div>
+            <div class="field">
               <label>自己紹介</label>
-              <textarea id="su-bio" placeholder="得意な施術やこだわりなど" style="min-height:140px;"></textarea>
+              <textarea id="su-bio" placeholder="得意な施術やこだわりなど"></textarea>
             </div>
           </div>
 
@@ -1690,12 +1570,13 @@ a { color: inherit; text-decoration: none; }
         <div class="app-header">
           <div class="brand">STYLE ARCHIVE<small>KNOWLEDGE BASE</small></div>
           <button class="icon-btn" data-nav="search">⌕</button>
-          <button class="icon-btn" id="btn-notif">◔<span class="notif-dot" id="notif-dot" hidden></span></button>
+          <button class="icon-btn">◔</button>
         </div>
         <div class="screen-body">
 
           <div class="page-title">
             <h1>今日の施術事例</h1>
+            <div class="lead">1,284 CASES · UPDATED 14 MIN AGO</div>
           </div>
 
           <div class="chip-scroll" id="home-chips">
@@ -1706,7 +1587,37 @@ a { color: inherit; text-decoration: none; }
             <button class="chip-btn">パーマ</button>
           </div>
 
-          <div class="grid-list" id="home-list"></div>
+          <div class="case-list" id="home-list">
+
+            <article class="case-card" data-open-detail="1" data-menu="カラー">
+              <div class="before-after">
+                <div class="side real-before">BEFORE</div>
+                <div class="side real-after">AFTER</div>
+                <div class="divider"></div>
+              </div>
+              <div class="case-body">
+                <div class="case-title">ハイトーンから濁らせないダークアッシュ</div>
+                <div class="case-meta">
+                  <span class="tag damage-3">DAMAGE 3</span>
+                  <span class="tag">Lv8 → Lv6</span>
+                  <span class="tag accent">BLEACH 履歴あり</span>
+                </div>
+                <div class="case-recipe">
+                  N.カラー 6/13 : 6/00 : Ash-8 = 30 : 20 : 10<br>OX 3% / 25min
+                </div>
+                <div class="case-author">
+                  <div class="avatar"></div>
+                  <span>Mika Sato · SALON TOKYO</span>
+                </div>
+              </div>
+              <div class="action-bar">
+                <button class="act like" data-count="124"><span class="ico">♡</span><span class="n">124</span></button>
+                <button class="act"><span class="ico">💬</span>18</button>
+                <button class="act save save-btn"><span class="ico">◇</span>保存</button>
+              </div>
+            </article>
+
+          </div>
         </div>
       </div>
 
@@ -1996,14 +1907,10 @@ a { color: inherit; text-decoration: none; }
           <span>9:41</span>
           <span class="right">100%</span>
         </div>
-        <div class="app-header" style="position:relative;">
+        <div class="app-header">
           <button class="back" data-nav="home">←</button>
           <div class="title">マイページ</div>
-          <button class="icon-btn" id="btn-settings">⚙</button>
-          <div class="post-menu" id="settings-menu" hidden style="top:52px;right:16px;">
-            <button id="btn-edit-profile">プロフィール編集</button>
-            <button id="btn-logout" class="danger">ログアウト</button>
-          </div>
+          <button class="icon-btn" id="btn-edit-profile">⚙</button>
         </div>
         <div class="screen-body">
 
@@ -2714,28 +2621,12 @@ a { color: inherit; text-decoration: none; }
     });
   });
 
-  var toastTimer = null;
-  function hideToast() {
-    document.getElementById("toast").classList.remove("show");
-    if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
-  }
   function showToast(msg) {
     var t = document.getElementById("toast");
     t.textContent = msg;
     t.classList.add("show");
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(hideToast, 1500); // 1.5秒で自動的に消える
+    setTimeout(function () { t.classList.remove("show"); }, 1400);
   }
-  // タップ or 上スワイプでも消せる
-  (function () {
-    var t = document.getElementById("toast");
-    var startY = null;
-    t.addEventListener("click", hideToast);
-    t.addEventListener("touchstart", function (e) { startY = e.touches[0].clientY; }, { passive: true });
-    t.addEventListener("touchmove", function (e) {
-      if (startY !== null && startY - e.touches[0].clientY > 15) { hideToast(); startY = null; }
-    }, { passive: true });
-  })();
 
   /* ================================================================
      アカウント + 実投稿（Supabaseに保存 = 全員で共有）
@@ -3024,7 +2915,7 @@ a { color: inherit; text-decoration: none; }
         (recipeLine ? '<div class="case-recipe">' + recipeLine + '</div>' : '') +
         '<div class="case-author">' +
           '<div class="avatar"' + (avatarFor(post.accountId) ? ' style="background-image:url(' + avatarFor(post.accountId) + ');"' : '') + '></div>' +
-          '<span>' + esc(a.name || "名無し") + '</span>' +
+          '<span>' + esc(a.name || "名無し") + (a.salon ? " · " + esc(a.salon) : "") + '</span>' +
         '</div>' +
       '</div>' +
       '<div class="action-bar">' +
@@ -3079,55 +2970,9 @@ a { color: inherit; text-decoration: none; }
 
   /* メニュー外をタップしたら閉じる */
   document.addEventListener("click", function (e) {
-    if (!e.target.closest(".card-menu-btn") && !e.target.closest("#btn-settings")) {
+    if (!e.target.closest(".card-menu-btn")) {
       document.querySelectorAll(".post-menu").forEach(function (m) { m.hidden = true; });
     }
-  });
-
-  /* ================================================================
-     通知（グループ参加申請）
-     ================================================================ */
-  function pendingRequestCount() {
-    var cur = currentAccount();
-    if (!cur) return 0;
-    var n = 0;
-    DB.groups.forEach(function (g) {
-      if (String(g.ownerId) === String(cur.id)) n += (g.pending || []).length;
-    });
-    return n;
-  }
-  function updateNotifDot() {
-    var dot = document.getElementById("notif-dot");
-    if (dot) dot.hidden = pendingRequestCount() === 0;
-  }
-  document.getElementById("btn-notif").addEventListener("click", function () {
-    if (pendingRequestCount() > 0) {
-      navigate("search"); // 申請の承認は検索ページのグループ欄で行う
-      showToast("グループ参加申請が届いています");
-    } else {
-      showToast("新しい通知はありません");
-    }
-  });
-
-  /* ================================================================
-     マイページの設定メニュー（⚙ → 編集 / ログアウト）
-     ================================================================ */
-  document.getElementById("btn-settings").addEventListener("click", function (e) {
-    e.stopPropagation();
-    var m = document.getElementById("settings-menu");
-    m.hidden = !m.hidden;
-  });
-  document.getElementById("btn-logout").addEventListener("click", function () {
-    document.getElementById("settings-menu").hidden = true;
-    localStorage.removeItem(CURRENT_KEY);
-    editingAccount = false;
-    document.getElementById("su-back").hidden = true;
-    clearSignupForm();
-    var suBtn = document.getElementById("su-submit");
-    if (suBtn) suBtn.textContent = "アカウントを作成";
-    renderAccountList();
-    navigate("signup");
-    showToast("ログアウトしました");
   });
 
   /* --- 投稿の編集/削除 --- */
@@ -3172,34 +3017,10 @@ a { color: inherit; text-decoration: none; }
     navigate("new");
   }
 
-  /* --- フォロー（保存テーブルの内部レコードとして永続化） --- */
-  function isFollowing(targetId) {
-    var cur = currentAccount();
-    if (!cur) return false;
-    var id = "__follow__" + targetId;
-    return DB.saves.some(function (s) { return s.accountId === cur.id && s.id === id; });
-  }
-  function toggleFollow(targetId) {
-    var cur = currentAccount();
-    if (!cur) return;
-    var id = "__follow__" + targetId;
-    if (isFollowing(targetId)) {
-      DB.saves = DB.saves.filter(function (s) { return !(s.accountId === cur.id && s.id === id); });
-      apiDeleteSave(cur.id, id);
-    } else {
-      var entry = { accountId: cur.id, id: id, title: "", author: "", bg: "" };
-      DB.saves.push(entry);
-      apiAddSave(entry);
-    }
-    renderProfile();
-  }
-
   /* 実投稿の詳細表示（サンプル用の詳細モーダルを流用） */
   function openPostDetail(post) {
     var a = post.author || {};
     var av = avatarFor(post.accountId);
-    var cur = currentAccount();
-    var isOwn = cur && post.accountId === cur.id;
     function photoSide(img, label, fallback) {
       if (img) {
         return '<div class="side" style="background-image:url(' + img + ');background-size:cover;background-position:center;color:transparent;">' + label + '</div>';
@@ -3219,17 +3040,11 @@ a { color: inherit; text-decoration: none; }
         '<h1 class="detail-title">' + esc(post.title) + '</h1>' +
         '<div class="detail-author-row">' +
           '<div class="avatar"' + (av ? ' style="background-image:url(' + av + ');"' : '') + '></div>' +
-          '<div style="flex:1;">' +
+          '<div>' +
             '<div class="name">' + esc(a.name || "") + '</div>' +
+            '<div class="role">' + esc(a.salon || "") + '</div>' +
           '</div>' +
-          (isOwn ? '' : '<button class="follow-btn' + (isFollowing(post.accountId) ? ' following' : '') + '" id="detail-follow">' + (isFollowing(post.accountId) ? "フォロー中" : "フォロー") + '</button>') +
         '</div>' +
-        (isOwn
-          ? '<div class="detail-own-actions">' +
-              '<button id="detail-edit">編集する</button>' +
-              '<button id="detail-del" class="danger">削除する</button>' +
-            '</div>'
-          : '') +
         '<div class="detail-section">' +
           '<h3><span class="num">01</span>メニュー</h3>' +
           '<p>' + esc(menuLine) + '</p>' +
@@ -3240,30 +3055,6 @@ a { color: inherit; text-decoration: none; }
     var modal = document.querySelector('[data-screen="detail"]');
     modal.classList.add("active");
     document.getElementById("tabbar").classList.add("hidden");
-
-    var fb = document.getElementById("detail-follow");
-    if (fb) {
-      fb.addEventListener("click", function () {
-        toggleFollow(post.accountId);
-        var on = isFollowing(post.accountId);
-        fb.textContent = on ? "フォロー中" : "フォロー";
-        fb.classList.toggle("following", on);
-      });
-    }
-    var eb = document.getElementById("detail-edit");
-    if (eb) {
-      eb.addEventListener("click", function () {
-        closeDetail();
-        startEditPost(post);
-      });
-    }
-    var delBtn = document.getElementById("detail-del");
-    if (delBtn) {
-      delBtn.addEventListener("click", function () {
-        closeDetail();
-        deletePost(post);
-      });
-    }
   }
 
   function deletePost(post) {
@@ -3331,10 +3122,8 @@ a { color: inherit; text-decoration: none; }
         list.innerHTML = '<div class="empty-note">下書きはまだありません。<br>投稿時に公開範囲で「下書き」を選ぶとここに保存されます。</div>';
         return;
       }
-      var dgrid = document.createElement("div");
-      dgrid.className = "grid-list large";
-      drafts.forEach(function (p) { dgrid.appendChild(makeGridTile(p)); });
-      list.appendChild(dgrid);
+      drafts.forEach(function (p) { list.appendChild(makePostCard(p)); });
+      syncSaveButtons();
       return;
     }
     if (name === "保存") {
@@ -3374,37 +3163,22 @@ a { color: inherit; text-decoration: none; }
   /* --- 投稿の描画（ホーム先頭 + マイページ） --- */
   var homeMenuFilter = null; // ホームのチップで選択中のメニュー（nullはすべて）
 
-  /* グリッド用のタイル（タップで詳細へ） */
-  function makeGridTile(post) {
-    var b = document.createElement("button");
-    b.className = "grid-tile";
-    var img = post.after || post.before;
-    var badges = "";
-    if (post.visibility === "group") badges += '<span class="g-badge">グループ</span>';
-    if (post.visibility === "draft") badges += '<span class="g-badge">下書き</span>';
-    b.innerHTML =
-      '<div class="g-thumb"' + (img ? ' style="background-image:url(' + img + ');"' : '') + '></div>' +
-      '<div class="g-body">' +
-        '<div class="g-title">' + esc(post.title) + badges + '</div>' +
-        '<div class="g-author">' + esc(post.author ? post.author.name : "") + '</div>' +
-      '</div>';
-    b.addEventListener("click", function () { openPostDetail(post); });
-    return b;
-  }
-
   function renderHomePosts() {
     var list = document.getElementById("home-list");
     if (!list) return;
-    list.innerHTML = "";
+    list.querySelectorAll(".user-post").forEach(function (el) { el.remove(); });
     // 公開投稿のみ（グループ・下書きはホームに出さない）+ メニューフィルタ
     var posts = publicPosts().filter(function (p) {
       return !homeMenuFilter || (p.menu || []).indexOf(homeMenuFilter) !== -1;
     });
-    if (!posts.length) {
-      list.innerHTML = '<div class="empty-note" style="grid-column:1/-1;">まだ投稿がありません。</div>';
-      return;
+    for (var i = posts.length - 1; i >= 0; i--) {
+      list.insertBefore(makePostCard(posts[i]), list.firstChild);
     }
-    posts.forEach(function (p) { list.appendChild(makeGridTile(p)); });
+    // サンプルカードもメニューで表示制御
+    list.querySelectorAll(".case-card[data-menu]").forEach(function (el) {
+      el.hidden = !!homeMenuFilter && el.dataset.menu !== homeMenuFilter;
+    });
+    syncSaveButtons();
   }
 
   document.querySelectorAll("#home-chips .chip-btn").forEach(function (chip) {
@@ -3432,10 +3206,8 @@ a { color: inherit; text-decoration: none; }
       list.innerHTML = '<div class="empty-note">まだ投稿がありません。<br>下タブの「投稿」から最初の施術事例を残しましょう。</div>';
       return;
     }
-    var grid = document.createElement("div");
-    grid.className = "grid-list large";
-    posts.forEach(function (post) { grid.appendChild(makeGridTile(post)); });
-    list.appendChild(grid);
+    posts.forEach(function (post) { list.appendChild(makePostCard(post)); });
+    syncSaveButtons();
   }
 
   function renderProfile() {
@@ -3445,7 +3217,10 @@ a { color: inherit; text-decoration: none; }
     var av = avatarFor(p.id);
     me.querySelector(".p-avatar").style.backgroundImage = av ? "url(" + av + ")" : "";
     me.querySelector(".p-name").textContent = p.name;
-    me.querySelector(".p-role").textContent = p.role ? "@" + p.role : "";
+    var roleParts = [];
+    if (p.role) roleParts.push(p.role);
+    if (p.salon) roleParts.push(p.salon);
+    me.querySelector(".p-role").textContent = roleParts.join(" · ") || "STYLIST";
     me.querySelector(".p-bio").textContent = p.bio || "";
     var tiles = me.querySelectorAll(".stat-tile .v");
     tiles[0].textContent = loadPosts().filter(function (x) {
@@ -3453,8 +3228,7 @@ a { color: inherit; text-decoration: none; }
     }).length;
     tiles[1].textContent = "0";
     tiles[2].textContent = mySaves().length;
-    // FOLLOW = 自分をフォローしている人数
-    tiles[3].textContent = DB.saves.filter(function (s) { return s.id === "__follow__" + p.id; }).length;
+    tiles[3].textContent = "0";
   }
 
   /* --- 投稿の確定 --- */
@@ -3720,69 +3494,89 @@ a { color: inherit; text-decoration: none; }
     showToast("参加申請を送りました（承認待ち）");
   });
 
-  /* --- 既存アカウントでのログイン（名前 + パスワード。一覧は表示しない） --- */
+  /* --- アカウント選択リスト（サインアップ画面） --- */
   function renderAccountList() {
     var wrap = document.getElementById("su-accounts");
-    wrap.hidden = editingAccount || loadAccounts().length === 0;
-  }
+    var list = document.getElementById("su-account-list");
+    var accounts = loadAccounts();
+    wrap.hidden = editingAccount || accounts.length === 0;
+    list.innerHTML = "";
+    accounts.forEach(function (a) {
+      var row = document.createElement("button");
+      row.className = "acct-item";
+      var av = avatarFor(a.id);
+      row.innerHTML =
+        '<div class="avatar"' + (av ? ' style="background-image:url(' + av + ');"' : '') + '></div>' +
+        '<div class="info"><div class="nm">' + esc(a.name) + '</div>' +
+        (a.salon ? '<div class="sl">' + esc(a.salon) + '</div>' : '') +
+        '</div><span class="go">ログイン →</span>';
 
-  function tryNameLogin() {
-    var uid = (document.getElementById("login-name").value || "").trim();
-    var pw = document.getElementById("login-pw").value;
-    if (!uid || !pw) { showToast("ユーザーIDとパスワードを入力してください"); return; }
-    var acct = null;
-    loadAccounts().forEach(function (a) {
-      // ユーザーIDで照合（ID未設定の旧アカウントはニックネームでも可）
-      if ((a.role && a.role.toLowerCase() === uid.toLowerCase()) || (!a.role && a.name === uid)) acct = a;
-    });
-    if (!acct) { showToast("ユーザーIDまたはパスワードが違います"); return; }
-    function done(msg) {
-      document.getElementById("login-name").value = "";
-      document.getElementById("login-pw").value = "";
-      localStorage.setItem(CURRENT_KEY, String(acct.id));
-      renderProfile();
-      renderMyPosts();
-      renderHomePosts();
-      renderFavs();
-      renderGroups();
-      updateSearchBadge();
-      updateNotifDot();
-      navigate("home");
-      showToast(msg);
-    }
-    var stored = pwHashFor(acct.id);
-    if (!stored) {
-      // パスワード未設定の旧アカウント: 初回に設定してログイン
-      if (pw.length < 4) { showToast("パスワードは4文字以上にしてください"); return; }
-      hashPw(pw, acct.id).then(function (h) {
-        setPw(acct.id, h);
-        done("パスワードを設定してログインしました ✓");
+      // パスワード入力フォーム（行をタップで開閉）
+      var pwForm = document.createElement("div");
+      pwForm.className = "acct-pw-form";
+      pwForm.hidden = true;
+      var hasPw = !!pwHashFor(a.id);
+      var pwInput = document.createElement("input");
+      pwInput.type = "password";
+      pwInput.placeholder = hasPw ? "パスワード" : "初回パスワードを設定（4文字以上）";
+      pwInput.autocomplete = "current-password";
+      var pwBtn = document.createElement("button");
+      pwBtn.textContent = "ログイン";
+      pwForm.appendChild(pwInput);
+      pwForm.appendChild(pwBtn);
+
+      row.addEventListener("click", function () {
+        var willOpen = pwForm.hidden;
+        list.querySelectorAll(".acct-pw-form").forEach(function (f) { f.hidden = true; });
+        pwForm.hidden = !willOpen;
+        if (!pwForm.hidden) pwInput.focus();
       });
-      return;
-    }
-    hashPw(pw, acct.id).then(function (h) {
-      if (h === stored) {
-        done("ログインしました ✓");
-      } else {
-        showToast("ユーザーIDまたはパスワードが違います");
-        document.getElementById("login-pw").value = "";
+
+      function doLogin() {
+        localStorage.setItem(CURRENT_KEY, String(a.id));
+        renderProfile();
+        renderMyPosts();
+        renderHomePosts();
+        renderFavs();
+        renderGroups();
+        updateSearchBadge();
+        navigate("home");
       }
+      function tryLogin() {
+        var pw = pwInput.value;
+        var stored = pwHashFor(a.id);
+        if (!stored) {
+          // 旧アカウント: 初回にパスワードを設定してログイン
+          if (pw.length < 4) { showToast("パスワードは4文字以上にしてください"); return; }
+          hashPw(pw, a.id).then(function (h) {
+            setPw(a.id, h);
+            doLogin();
+            showToast("パスワードを設定してログインしました ✓");
+          });
+          return;
+        }
+        hashPw(pw, a.id).then(function (h) {
+          if (h === stored) {
+            doLogin();
+            showToast("ログインしました ✓");
+          } else {
+            showToast("パスワードが違います");
+            pwInput.value = "";
+          }
+        });
+      }
+      pwBtn.addEventListener("click", tryLogin);
+      pwInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); tryLogin(); }
+      });
+
+      list.appendChild(row);
+      list.appendChild(pwForm);
     });
   }
-  /* アカウント画面の戻るボタン（ログイン中に開いたときのみ表示） */
-  document.getElementById("su-back").addEventListener("click", function () {
-    editingAccount = false;
-    suSubmit.textContent = "アカウントを作成";
-    navigate("me");
-  });
-
-  document.getElementById("login-btn").addEventListener("click", tryNameLogin);
-  document.getElementById("login-pw").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") { e.preventDefault(); tryNameLogin(); }
-  });
 
   function clearSignupForm() {
-    ["su-uid", "su-name", "su-pw", "su-bio"].forEach(function (id) {
+    ["su-name", "su-pw", "su-salon", "su-role", "su-bio"].forEach(function (id) {
       document.getElementById(id).value = "";
     });
     document.getElementById("su-pw").placeholder = "4文字以上";
@@ -3793,24 +3587,11 @@ a { color: inherit; text-decoration: none; }
   suSubmit.addEventListener("click", function () {
     var name = (document.getElementById("su-name").value || "").trim();
     if (!name) {
-      showToast("ニックネームを入力してください");
+      showToast("名前を入力してください");
       return;
     }
-    var uid = (document.getElementById("su-uid").value || "").trim();
-    if (!/^[A-Za-z0-9_.-]{3,}$/.test(uid)) {
-      showToast("ユーザーIDは半角英数3文字以上にしてください");
-      return;
-    }
-    var editCur = editingAccount ? currentAccount() : null;
-    var uidTaken = loadAccounts().some(function (a) {
-      return (!editCur || a.id !== editCur.id) && (a.role || "").toLowerCase() === uid.toLowerCase();
-    });
-    if (uidTaken) {
-      showToast("このユーザーIDはすでに使われています");
-      return;
-    }
-    var salon = "";
-    var role = uid; // ユーザーIDはroleカラムに保存
+    var salon = (document.getElementById("su-salon").value || "").trim();
+    var role = (document.getElementById("su-role").value || "").trim();
     var bio = (document.getElementById("su-bio").value || "").trim();
     var pw = document.getElementById("su-pw").value;
 
@@ -3904,14 +3685,14 @@ a { color: inherit; text-decoration: none; }
     var p = currentAccount();
     if (p) {
       editingAccount = true;
-      document.getElementById("su-uid").value = p.role || "";
       document.getElementById("su-name").value = p.name || "";
+      document.getElementById("su-salon").value = p.salon || "";
+      document.getElementById("su-role").value = p.role || "";
       document.getElementById("su-bio").value = p.bio || "";
       document.getElementById("su-pw").value = "";
       document.getElementById("su-pw").placeholder = "変更する場合のみ入力";
       suSubmit.textContent = "保存する";
     }
-    document.getElementById("su-back").hidden = false;
     renderAccountList();
     navigate("signup");
   });
@@ -3921,7 +3702,6 @@ a { color: inherit; text-decoration: none; }
     editingAccount = false;
     suSubmit.textContent = "アカウントを作成";
     clearSignupForm();
-    document.getElementById("su-back").hidden = false;
     renderAccountList();
     navigate("signup");
   });
@@ -3935,7 +3715,6 @@ a { color: inherit; text-decoration: none; }
     renderGroups();
     renderProfile();
     updateSearchBadge();
-    updateNotifDot();
   }
 
   refreshData(function () {
