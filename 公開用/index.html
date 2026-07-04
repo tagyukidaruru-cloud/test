@@ -1729,6 +1729,10 @@ a { color: inherit; text-decoration: none; }
               <input type="password" id="su-pw" placeholder="4文字以上" autocomplete="new-password">
             </div>
             <div class="field">
+              <label>サロン名（任意）</label>
+              <input type="text" id="su-salon" placeholder="例: SALON TOKYO">
+            </div>
+            <div class="field">
               <label>自己紹介</label>
               <textarea id="su-bio" placeholder="得意な施術やこだわりなど" style="min-height:140px;"></textarea>
             </div>
@@ -2159,6 +2163,7 @@ a { color: inherit; text-decoration: none; }
           <div class="profile-header">
             <div class="p-avatar" id="user-avatar" style="cursor:default;"></div>
             <div class="p-name" id="user-name"></div>
+            <div class="p-role" id="user-salon"></div>
             <div class="p-bio" id="user-bio"></div>
           </div>
           <div class="stat-row">
@@ -3335,6 +3340,7 @@ a { color: inherit; text-decoration: none; }
     var scr = document.querySelector('[data-screen="user"]');
     scr.querySelector("#user-avatar").style.backgroundImage = av ? "url(" + av + ")" : "";
     scr.querySelector("#user-name").textContent = acc.name + (acc.role ? " @" + acc.role : "");
+    scr.querySelector("#user-salon").textContent = acc.salon || "";
     scr.querySelector("#user-bio").textContent = acc.bio || "";
     var posts = DB.posts.filter(function (p) {
       return p.accountId === acc.id && (!p.visibility || p.visibility === "public");
@@ -3665,7 +3671,10 @@ a { color: inherit; text-decoration: none; }
     var av = avatarFor(p.id);
     me.querySelector(".p-avatar").style.backgroundImage = av ? "url(" + av + ")" : "";
     me.querySelector(".p-name").textContent = p.name;
-    me.querySelector(".p-role").textContent = p.role ? "@" + p.role : "";
+    var roleLine = [];
+    if (p.role) roleLine.push("@" + p.role);
+    if (p.salon) roleLine.push(p.salon);
+    me.querySelector(".p-role").textContent = roleLine.join(" · ");
     me.querySelector(".p-bio").textContent = p.bio || "";
     var tiles = me.querySelectorAll(".stat-tile .v");
     tiles[0].textContent = loadPosts().filter(function (x) {
@@ -4039,7 +4048,7 @@ a { color: inherit; text-decoration: none; }
   });
 
   function clearSignupForm() {
-    ["su-uid", "su-name", "su-pw", "su-bio"].forEach(function (id) {
+    ["su-uid", "su-name", "su-pw", "su-salon", "su-bio"].forEach(function (id) {
       document.getElementById(id).value = "";
     });
     document.getElementById("su-pw").placeholder = "4文字以上";
@@ -4066,7 +4075,7 @@ a { color: inherit; text-decoration: none; }
       showToast("このユーザーIDはすでに使われています");
       return;
     }
-    var salon = "";
+    var salon = (document.getElementById("su-salon").value || "").trim();
     var role = uid; // ユーザーIDはroleカラムに保存
     var bio = (document.getElementById("su-bio").value || "").trim();
     var pw = document.getElementById("su-pw").value;
@@ -4163,6 +4172,7 @@ a { color: inherit; text-decoration: none; }
       editingAccount = true;
       document.getElementById("su-uid").value = p.role || "";
       document.getElementById("su-name").value = p.name || "";
+      document.getElementById("su-salon").value = p.salon || "";
       document.getElementById("su-bio").value = p.bio || "";
       document.getElementById("su-pw").value = "";
       document.getElementById("su-pw").placeholder = "変更する場合のみ入力";
