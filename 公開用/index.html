@@ -1447,6 +1447,7 @@ a { color: inherit; text-decoration: none; }
 .form-actions {
   position: sticky;
   bottom: 0;
+  z-index: 15;
   background: rgba(244,240,233,0.95);
   backdrop-filter: blur(12px);
   padding: 12px 20px;
@@ -1454,6 +1455,11 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   gap: 8px;
   border-top: 1px solid var(--line);
+}
+@media (max-width: 500px) {
+  .form-actions {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
 }
 .form-actions .btn,
 .signup-actions .btn {
@@ -1821,6 +1827,8 @@ a { color: inherit; text-decoration: none; }
                 <label><span class="box"></span>カラー</label>
                 <label><span class="box"></span>縮毛矯正</label>
                 <label><span class="box"></span>パーマ</label>
+                <label><span class="box"></span>エクステ</label>
+                <label><span class="box"></span>その他</label>
               </div>
             </div>
 
@@ -1927,6 +1935,7 @@ a { color: inherit; text-decoration: none; }
                   <label><span class="box"></span>カラー</label>
                   <label><span class="box"></span>縮毛矯正</label>
                   <label><span class="box"></span>パーマ</label>
+                  <label><span class="box"></span>エクステ</label>
                   <label><span class="box"></span>その他</label>
                 </div>
               </div>
@@ -2279,7 +2288,7 @@ a { color: inherit; text-decoration: none; }
 
     // タブバーの表示/非表示（アカウント作成中のみ非表示）
     var tabbar = document.getElementById("tabbar");
-    tabbar.classList.toggle("hidden", to === "signup");
+    tabbar.classList.toggle("hidden", to === "signup" || to === "new");
 
     // スクロール位置リセット
     var body = toEl.querySelector(".screen-body");
