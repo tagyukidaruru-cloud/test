@@ -2167,7 +2167,7 @@ a { color: inherit; text-decoration: none; }
         </div>
         <div class="app-header" style="position:relative;">
           <button class="back" data-nav="home">←</button>
-          <div class="title">マイページ</div>
+          <div class="title">my page</div>
           <button class="icon-btn" id="btn-settings">⚙</button>
           <div class="post-menu" id="settings-menu" hidden style="top:52px;right:16px;">
             <button id="btn-edit-profile">プロフィール編集</button>
@@ -2337,7 +2337,7 @@ a { color: inherit; text-decoration: none; }
         <span class="lbl">投稿</span>
       </button>
       <button class="tab" data-nav="fav"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h12v18l-6-5-6 5V3z"/></svg></span><span>保存</span></button>
-      <button class="tab" data-nav="me"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a4 4 0 018 0v1a3.6 3.6 0 01-1 2.4c1.4.5 2.4 1.9 2.4 3.6V21H3.6v-3.5c0-1.7 1-3.1 2.4-3.6A3.6 3.6 0 015 9.5"/><circle cx="15.5" cy="16.5" r="1.6"/><circle cx="19" cy="18.5" r="1.6"/><path d="M14.2 15.4l6.5-8M17 17.6l3.7-3"/></svg></span><span>マイ</span></button>
+      <button class="tab" data-nav="me"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a4 4 0 018 0v1a3.6 3.6 0 01-1 2.4c1.4.5 2.4 1.9 2.4 3.6V21H3.6v-3.5c0-1.7 1-3.1 2.4-3.6A3.6 3.6 0 015 9.5"/><circle cx="15.5" cy="16.5" r="1.6"/><circle cx="19" cy="18.5" r="1.6"/><path d="M14.2 15.4l6.5-8M17 17.6l3.7-3"/></svg></span><span>my</span></button>
     </div>
 
     <!-- トースト -->
@@ -3073,6 +3073,13 @@ a { color: inherit; text-decoration: none; }
       DB.posts = res[1].map(postFromRow);
       DB.groups = res[2].map(groupFromRow);
       DB.saves = res[3].map(saveFromRow);
+      // 保存直後のアバターがまだサーバーに届いていなければ消えないよう保持
+      if (pendingAvatar) {
+        var onServer = DB.saves.some(function (s) {
+          return s.id === "__avatar__" && s.accountId === pendingAvatar.accountId && s.bg === pendingAvatar.bg;
+        });
+        if (onServer) pendingAvatar = null;
+      }
       cacheAccounts();
       if (then) then();
     }).catch(function (e) {
@@ -3101,7 +3108,9 @@ a { color: inherit; text-decoration: none; }
       return s.accountId === cur.id && String(s.id).indexOf("__") !== 0;
     });
   }
+  var pendingAvatar = null; // 保存直後のサーバー同期との競合防止用
   function avatarFor(accountId) {
+    if (pendingAvatar && Number(accountId) === pendingAvatar.accountId) return pendingAvatar.bg;
     var hit = null;
     DB.saves.forEach(function (s) {
       if (s.id === "__avatar__" && s.accountId === Number(accountId)) hit = s;
@@ -4301,6 +4310,7 @@ a { color: inherit; text-decoration: none; }
     DB.saves = DB.saves.filter(function (s) { return !(s.id === "__avatar__" && s.accountId === cur.id); });
     var entry = { accountId: cur.id, id: "__avatar__", title: "", author: "", bg: data };
     DB.saves.push(entry);
+    pendingAvatar = { accountId: cur.id, bg: data };
     apiAddSave(entry);
     renderProfile();
     renderHomePosts();
