@@ -2279,48 +2279,6 @@ a { color: inherit; text-decoration: none; }
       </div>
 
       <!-- ================================================================
-           管理ページ（administrator専用）
-           ================================================================ -->
-      <div class="screen" data-screen="admin">
-        <div class="status-bar">
-          <span>9:41</span>
-          <span class="right">100%</span>
-        </div>
-        <div class="app-header">
-          <button class="back" data-nav="me">←</button>
-          <div class="title">管理ページ</div>
-        </div>
-        <div class="screen-body">
-          <div class="group-panel">
-            <div class="gp-head">アカウント推移</div>
-            <div id="ad-accounts" style="padding:10px 14px;"></div>
-          </div>
-          <div class="group-panel">
-            <div class="gp-head">投稿分析（時間帯 × メニュー）</div>
-            <div id="ad-posts" style="padding:10px 14px;overflow-x:auto;"></div>
-          </div>
-          <div class="group-panel">
-            <div class="gp-head">お知らせ配信</div>
-            <div style="padding:10px 14px;">
-              <textarea id="admin-notice" placeholder="全ユーザーのホーム上部に表示されます" style="width:100%;min-height:70px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:#fff;"></textarea>
-              <div class="crop-actions">
-                <button id="notice-clear">削除</button>
-                <button id="notice-send" style="background:var(--ink);color:var(--bg);border-color:var(--ink);">配信</button>
-              </div>
-            </div>
-          </div>
-          <div class="group-panel">
-            <div class="gp-head">パスワードリセット</div>
-            <div id="ad-accounts-list"></div>
-          </div>
-          <div class="group-panel">
-            <div class="gp-head">投稿の管理</div>
-            <div id="ad-post-list"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ================================================================
            検索結果画面
            ================================================================ -->
       <div class="screen" data-screen="search-result">
@@ -2421,7 +2379,6 @@ a { color: inherit; text-decoration: none; }
      ================================================================ */
   function navigate(to) {
     if (to === current) return;
-    if (to === "admin" && !isAdminCur()) return; // 管理ページは管理者のみ
     if (to === "new" && isAdminCur()) return;    // 管理アカウントは投稿不可
     var fromEl = document.querySelector('[data-screen="' + current + '"]');
     var toEl = document.querySelector('[data-screen="' + to + '"]');
@@ -3400,131 +3357,9 @@ a { color: inherit; text-decoration: none; }
     if (n && n.bg) b.textContent = "📢 " + n.bg;
   }
 
-  /* --- 管理ページの描画 --- */
-  function renderAdmin() {
-    if (!isAdminCur()) return;
-    var accs = DB.accounts.filter(function (a) { return !isAdminAcc(a); });
-    // 1. アカウント推移
-    var byDay = {};
-    accs.forEach(function (a) {
-      var d = (a.created_at || "").slice(0, 10);
-      if (d) byDay[d] = (byDay[d] || 0) + 1;
-    });
-    var days = Object.keys(byDay).sort().slice(-14);
-    var html = '<div style="font-size:14px;margin-bottom:8px;">累計 <b style="font-family:var(--font-mono);font-size:18px;">' + accs.length + '</b> アカウント</div>';
-    days.forEach(function (d) {
-      html += '<div style="display:flex;justify-content:space-between;padding:3px 0;font-family:var(--font-mono);font-size:11px;"><span>' + d + '</span><span>+' + byDay[d] + '</span></div>';
-    });
-    document.getElementById("ad-accounts").innerHTML = html;
-
-    // 2. 投稿分析（時間帯×メニュー）
-    var MENUS = ["カット", "カラー", "縮毛矯正", "パーマ", "エクステ", "その他"];
-    var grid = {};
-    DB.posts.forEach(function (p) {
-      var h = new Date(p.ts).getHours();
-      (p.menu || []).forEach(function (m) {
-        if (MENUS.indexOf(m) === -1) return;
-        grid[h] = grid[h] || {};
-        grid[h][m] = (grid[h][m] || 0) + 1;
-      });
-    });
-    var hours = Object.keys(grid).map(Number).sort(function (a, b) { return a - b; });
-    var t = '<div style="font-size:11px;color:var(--ink-3);margin-bottom:6px;">全投稿 ' + DB.posts.length + ' 件</div>';
-    t += '<table style="border-collapse:collapse;font-family:var(--font-mono);font-size:10px;white-space:nowrap;"><tr><th style="padding:3px 6px;"></th>';
-    MENUS.forEach(function (m) { t += '<th style="padding:3px 6px;font-weight:400;color:var(--ink-3);">' + m.slice(0, 3) + '</th>'; });
-    t += '</tr>';
-    hours.forEach(function (h) {
-      t += '<tr><td style="padding:3px 6px;color:var(--ink-3);">' + h + '時</td>';
-      MENUS.forEach(function (m) {
-        var v = grid[h][m] || 0;
-        t += '<td style="padding:3px 6px;text-align:center;' + (v ? 'background:rgba(160,120,90,' + Math.min(0.15 + v * 0.15, 0.6) + ');border-radius:4px;' : 'color:var(--ink-4);') + '">' + (v || '·') + '</td>';
-      });
-      t += '</tr>';
-    });
-    t += '</table>';
-    document.getElementById("ad-posts").innerHTML = hours.length ? t : '<div style="font-size:12px;color:var(--ink-3);">まだ投稿がありません</div>';
-
-    // お知らせ欄
-    var n = currentNotice();
-    document.getElementById("admin-notice").value = n ? n.bg : "";
-
-    // 9. パスワードリセット
-    var alist = document.getElementById("ad-accounts-list");
-    alist.innerHTML = "";
-    accs.forEach(function (a) {
-      var row = document.createElement("div");
-      row.className = "gp-member";
-      row.innerHTML = '<span>' + esc(a.name) + (a.role ? ' <span style="color:var(--ink-3);font-size:11px;">@' + esc(a.role) + '</span>' : '') + '</span>';
-      var btn = document.createElement("button");
-      btn.className = "gp-remove";
-      btn.textContent = "PWリセット";
-      btn.addEventListener("click", function () {
-        var np = prompt(a.name + " さんの新しい仮パスワード（4文字以上）");
-        if (!np || np.length < 4) { if (np !== null) showToast("4文字以上にしてください"); return; }
-        hashPw(np, a.id).then(function (h) {
-          setPw(a.id, h);
-          showToast("パスワードを再設定しました ✓");
-        });
-      });
-      row.appendChild(btn);
-      alist.appendChild(row);
-    });
-
-    // 7. 投稿の管理（削除）
-    var plist = document.getElementById("ad-post-list");
-    plist.innerHTML = "";
-    if (!DB.posts.length) plist.innerHTML = '<div class="gp-member"><span style="color:var(--ink-3);">投稿はありません</span></div>';
-    DB.posts.forEach(function (p) {
-      var row = document.createElement("div");
-      row.className = "gp-member";
-      var dt = new Date(p.ts);
-      var when = (dt.getMonth() + 1) + "/" + dt.getDate() + " " + dt.getHours() + ":" + ("0" + dt.getMinutes()).slice(-2);
-      row.innerHTML = '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(p.title) + '<br><span style="color:var(--ink-3);font-size:10px;">' + esc(p.author ? p.author.name : "") + ' · ' + when + (p.visibility === "group" ? " · グループ" : p.visibility === "draft" ? " · 下書き" : "") + '</span></span>';
-      var btn = document.createElement("button");
-      btn.className = "gp-remove";
-      btn.textContent = "削除";
-      btn.addEventListener("click", function () {
-        if (!confirm("「" + p.title + "」を削除しますか？")) return;
-        deletePost(p);
-        renderAdmin();
-      });
-      row.appendChild(btn);
-      plist.appendChild(row);
-    });
-  }
-  document.getElementById("btn-notif").addEventListener("click", function () {
-    if (pendingRequestCount() > 0) {
-      navigate("search"); // 申請の承認は検索ページのグループ欄で行う
-      showToast("グループ参加申請が届いています");
-    } else {
-      showToast("新しい通知はありません");
-    }
-  });
-
-  /* 管理ページの入口とお知らせ配信 */
+  /* 管理ダッシュボード（別サイト）への入口 */
   document.getElementById("btn-admin").addEventListener("click", function () {
-    renderAdmin();
-    navigate("admin");
-  });
-  document.getElementById("notice-send").addEventListener("click", function () {
-    if (!isAdminCur()) return;
-    var cur = currentAccount();
-    var text = (document.getElementById("admin-notice").value || "").trim();
-    if (!text) { showToast("お知らせ内容を入力してください"); return; }
-    DB.saves = DB.saves.filter(function (s) { return s.id !== "__notice__"; });
-    var entry = { accountId: cur.id, id: "__notice__", title: "", author: "", bg: text };
-    DB.saves.push(entry);
-    apiAddSave(entry);
-    renderNotice();
-    showToast("お知らせを配信しました ✓");
-  });
-  document.getElementById("notice-clear").addEventListener("click", function () {
-    if (!isAdminCur()) return;
-    DB.saves = DB.saves.filter(function (s) { return s.id !== "__notice__"; });
-    sb("DELETE", "saves?save_id=eq.__notice__").catch(apiFail);
-    document.getElementById("admin-notice").value = "";
-    renderNotice();
-    showToast("お知らせを削除しました");
+    window.open("admin.html", "_blank");
   });
 
   /* ================================================================
