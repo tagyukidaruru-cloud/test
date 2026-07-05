@@ -562,6 +562,13 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 12px;
 }
 
+.detail-label {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  margin: 4px 2px 8px;
+}
 .detail-author-row {
   display: flex;
   align-items: center;
@@ -3564,6 +3571,7 @@ a { color: inherit; text-decoration: none; }
       '</div>' +
       '<div class="detail-body">' +
         '<h1 class="detail-title">' + esc(post.title) + '</h1>' +
+        '<div class="detail-label">プロフィール</div>' +
         '<div class="detail-author-row">' +
           '<div class="author-tap" id="detail-author" style="display:flex;align-items:center;gap:10px;flex:1;">' +
             '<div class="avatar"' + (av ? ' style="background-image:url(' + av + ');"' : '') + '></div>' +
