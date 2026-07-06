@@ -2353,13 +2353,12 @@ a { color: inherit; text-decoration: none; }
     <!-- プロフィール写真の切り取り調整 -->
     <div class="crop-modal" id="crop-modal" hidden>
       <div class="crop-sheet">
-        <div class="crop-title">切り取る範囲を調整 <span style="font-size:10px;color:var(--ink-3);">v7</span></div>
+        <div class="crop-title">切り取る範囲を調整</div>
         <div class="crop-viewport" id="crop-viewport">
           <img id="crop-img" alt="">
           <div class="crop-mask"></div>
         </div>
         <input type="range" id="crop-zoom" min="100" max="300" value="100">
-        <div id="crop-debug" style="font-family:monospace;font-size:9px;color:var(--ink-3);word-break:break-all;padding:4px 2px;"></div>
         <div class="crop-actions">
           <button id="crop-cancel">キャンセル</button>
           <button id="crop-ok">決定</button>
@@ -4421,18 +4420,6 @@ a { color: inherit; text-decoration: none; }
   }
   function cropRender() {
     cropImg.style.transform = "translate(" + crop.x + "px," + crop.y + "px) scale(" + crop.scale + ")";
-    var dbg = document.getElementById("crop-debug");
-    if (dbg && crop.img) {
-      var vpEl = document.getElementById("crop-viewport");
-      var vpr = vpEl.getBoundingClientRect();
-      var imr = cropImg.getBoundingClientRect();
-      dbg.textContent =
-        "vp=" + crop.vp + " realVp=" + Math.round(vpr.width) +
-        " s=" + crop.scale.toFixed(3) + " x=" + Math.round(crop.x) + " y=" + Math.round(crop.y) +
-        " nat=" + crop.img.naturalWidth + "x" + crop.img.naturalHeight +
-        " | imgRect w=" + Math.round(imr.width) + " dx=" + Math.round(imr.left - vpr.left) + " dy=" + Math.round(imr.top - vpr.top) +
-        " dpr=" + (window.devicePixelRatio || 1);
-    }
   }
   function openCropModal(url) {
     var img = new Image();
@@ -4491,18 +4478,22 @@ a { color: inherit; text-decoration: none; }
   document.getElementById("crop-cancel").addEventListener("click", closeCropModal);
   document.getElementById("crop-ok").addEventListener("click", function () {
     if (!crop.img) return;
-    // 表示と同じ変換(translate→scale)を順方向でcanvasに適用して画像化する。
-    // getBoundingClientRectを変換要素に使わないので、Safariの変換無視バグの影響を受けず
-    // 「円の中に見えている通り」がそのまま出力される。
+    // ビューポートに見えている範囲を「元画像のピクセル座標」で計算し、
+    // drawImageに元・出力の両方のサイズを明示指定して描く。
+    // サイズ引数を省略しないので、Safari(dpr>1)での拡大描画バグを回避できる。
     var out = 300;
+    var s = crop.scale;
+    var sx = -crop.x / s;                 // 見えている左端の元画像X
+    var sy = -crop.y / s;                 // 見えている上端の元画像Y
+    var sSize = crop.vp / s;              // 見えている正方形の元画像サイズ
+    var nw = crop.img.naturalWidth, nh = crop.img.naturalHeight;
+    // 画像範囲内にクランプ
+    sx = Math.max(0, Math.min(sx, nw));
+    sy = Math.max(0, Math.min(sy, nh));
+    sSize = Math.min(sSize, nw - sx, nh - sy);
     var c = document.createElement("canvas");
     c.width = out; c.height = out;
-    var ctx = c.getContext("2d");
-    var k = out / crop.vp; // ビューポート(CSS px)→出力300pxへの倍率
-    ctx.setTransform(k, 0, 0, k, 0, 0);
-    ctx.translate(crop.x, crop.y);
-    ctx.scale(crop.scale, crop.scale);
-    ctx.drawImage(crop.img, 0, 0);
+    c.getContext("2d").drawImage(crop.img, sx, sy, sSize, sSize, 0, 0, out, out);
     var data = c.toDataURL("image/jpeg", 0.85);
     closeCropModal();
     saveAvatar(data);
