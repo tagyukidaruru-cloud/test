@@ -4426,13 +4426,15 @@ a { color: inherit; text-decoration: none; }
     img.onload = function () {
       crop.img = img;
       crop.url = url;
+      cropImg.src = url;
+      cropZoom.value = 100;
+      cropModal.hidden = false; // 先に表示してからビューポートの実サイズを測る（hidden中は0になる）
+      var vpEl = document.getElementById("crop-viewport");
+      crop.vp = Math.round(vpEl.getBoundingClientRect().width) || 260;
       crop.minScale = Math.max(crop.vp / img.naturalWidth, crop.vp / img.naturalHeight);
       crop.scale = crop.minScale;
       crop.x = (crop.vp - img.naturalWidth * crop.scale) / 2;
       crop.y = (crop.vp - img.naturalHeight * crop.scale) / 2;
-      cropImg.src = url;
-      cropZoom.value = 100;
-      cropModal.hidden = false;
       cropRender();
     };
     img.src = url;
@@ -4476,25 +4478,18 @@ a { color: inherit; text-decoration: none; }
   document.getElementById("crop-cancel").addEventListener("click", closeCropModal);
   document.getElementById("crop-ok").addEventListener("click", function () {
     if (!crop.img) return;
-    // 画面に実際に表示されている位置・サイズを実測して切り出す。
-    // これで端末やDPR・スケールの差に依存せず「見えている範囲」がそのまま反映される。
-    var vpEl = document.getElementById("crop-viewport");
-    var vpRect = vpEl.getBoundingClientRect();
-    var imgRect = cropImg.getBoundingClientRect();
-    // 表示画像のCSSサイズ→元画像ピクセルへの倍率
-    var ratio = crop.img.naturalWidth / imgRect.width;
-    var sx = (vpRect.left - imgRect.left) * ratio;
-    var sy = (vpRect.top - imgRect.top) * ratio;
-    var sw = vpRect.width * ratio;
-    var sh = vpRect.height * ratio;
-    // 画像範囲内にクランプ
-    sx = Math.max(0, Math.min(sx, crop.img.naturalWidth - 1));
-    sy = Math.max(0, Math.min(sy, crop.img.naturalHeight - 1));
-    sw = Math.min(sw, crop.img.naturalWidth - sx);
-    sh = Math.min(sh, crop.img.naturalHeight - sy);
+    // 表示と同じ変換(translate→scale)を順方向でcanvasに適用して画像化する。
+    // getBoundingClientRectを変換要素に使わないので、Safariの変換無視バグの影響を受けず
+    // 「円の中に見えている通り」がそのまま出力される。
+    var out = 300;
     var c = document.createElement("canvas");
-    c.width = 300; c.height = 300;
-    c.getContext("2d").drawImage(crop.img, sx, sy, sw, sh, 0, 0, 300, 300);
+    c.width = out; c.height = out;
+    var ctx = c.getContext("2d");
+    var k = out / crop.vp; // ビューポート(CSS px)→出力300pxへの倍率
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.translate(crop.x, crop.y);
+    ctx.scale(crop.scale, crop.scale);
+    ctx.drawImage(crop.img, 0, 0);
     var data = c.toDataURL("image/jpeg", 0.85);
     closeCropModal();
     saveAvatar(data);
