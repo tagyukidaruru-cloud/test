@@ -2353,12 +2353,13 @@ a { color: inherit; text-decoration: none; }
     <!-- プロフィール写真の切り取り調整 -->
     <div class="crop-modal" id="crop-modal" hidden>
       <div class="crop-sheet">
-        <div class="crop-title">切り取る範囲を調整 <span style="font-size:10px;color:var(--ink-3);">v6</span></div>
+        <div class="crop-title">切り取る範囲を調整 <span style="font-size:10px;color:var(--ink-3);">v7</span></div>
         <div class="crop-viewport" id="crop-viewport">
           <img id="crop-img" alt="">
           <div class="crop-mask"></div>
         </div>
         <input type="range" id="crop-zoom" min="100" max="300" value="100">
+        <div id="crop-debug" style="font-family:monospace;font-size:9px;color:var(--ink-3);word-break:break-all;padding:4px 2px;"></div>
         <div class="crop-actions">
           <button id="crop-cancel">キャンセル</button>
           <button id="crop-ok">決定</button>
@@ -4420,6 +4421,18 @@ a { color: inherit; text-decoration: none; }
   }
   function cropRender() {
     cropImg.style.transform = "translate(" + crop.x + "px," + crop.y + "px) scale(" + crop.scale + ")";
+    var dbg = document.getElementById("crop-debug");
+    if (dbg && crop.img) {
+      var vpEl = document.getElementById("crop-viewport");
+      var vpr = vpEl.getBoundingClientRect();
+      var imr = cropImg.getBoundingClientRect();
+      dbg.textContent =
+        "vp=" + crop.vp + " realVp=" + Math.round(vpr.width) +
+        " s=" + crop.scale.toFixed(3) + " x=" + Math.round(crop.x) + " y=" + Math.round(crop.y) +
+        " nat=" + crop.img.naturalWidth + "x" + crop.img.naturalHeight +
+        " | imgRect w=" + Math.round(imr.width) + " dx=" + Math.round(imr.left - vpr.left) + " dy=" + Math.round(imr.top - vpr.top) +
+        " dpr=" + (window.devicePixelRatio || 1);
+    }
   }
   function openCropModal(url) {
     var img = new Image();
