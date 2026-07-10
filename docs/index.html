@@ -2353,7 +2353,7 @@ a { color: inherit; text-decoration: none; }
     <!-- プロフィール写真の切り取り調整 -->
     <div class="crop-modal" id="crop-modal" hidden>
       <div class="crop-sheet">
-        <div class="crop-title">切り取る範囲を調整</div>
+        <div class="crop-title">切り取る範囲を調整 <span style="font-size:10px;color:var(--ink-3);">v9</span></div>
         <div class="crop-viewport" id="crop-viewport">
           <img id="crop-img" alt="">
           <div class="crop-mask"></div>
@@ -4487,13 +4487,12 @@ a { color: inherit; text-decoration: none; }
     var sy = -crop.y / s;                 // 見えている上端の元画像Y
     var sSize = crop.vp / s;              // 見えている正方形の元画像サイズ
     var nw = crop.img.naturalWidth, nh = crop.img.naturalHeight;
-    // 画像範囲内にクランプ
-    sx = Math.max(0, Math.min(sx, nw));
-    sy = Math.max(0, Math.min(sy, nh));
-    sSize = Math.min(sSize, nw - sx, nh - sy);
+    // 正規化処理と同じ「5引数drawImage(画像全体をずらして拡大)」で切り出す。
+    // 9引数や変換付きdrawImageはSafari(dpr>1)で拡大描画バグを起こすため使わない。
+    var k = out / sSize; // 元画像→出力の倍率
     var c = document.createElement("canvas");
     c.width = out; c.height = out;
-    c.getContext("2d").drawImage(crop.img, sx, sy, sSize, sSize, 0, 0, out, out);
+    c.getContext("2d").drawImage(crop.img, -sx * k, -sy * k, nw * k, nh * k);
     var data = c.toDataURL("image/jpeg", 0.85);
     closeCropModal();
     saveAvatar(data);
