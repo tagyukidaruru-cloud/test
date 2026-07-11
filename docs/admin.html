@@ -403,7 +403,7 @@ textarea { width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(-
     accs.forEach(function (a) {
       var d = (a.created_at || "").slice(0, 10);
       t += "<tr><td>" + esc(a.name) + "</td><td style='font-family:var(--font-mono);font-size:11px;'>@" + esc(a.role || "") + "</td><td>" + esc(a.salon || "") + "</td><td style='font-family:var(--font-mono);font-size:11px;'>" + d + "</td>" +
-        "<td><button class='btn-sm neutral' data-pw='" + a.id + "'>PWリセット</button></td></tr>";
+        "<td style='white-space:nowrap;'><button class='btn-sm neutral' data-pw='" + a.id + "'>PWリセット</button> <button class='btn-sm' data-delacc='" + a.id + "'>削除</button></td></tr>";
     });
     var el = document.getElementById("t-accounts");
     el.innerHTML = t;
@@ -419,6 +419,52 @@ textarea { width: 100%; min-height: 80px; padding: 12px; border: 1px solid var(-
           });
         }).then(function () { alert("再設定しました"); loadAll(); });
       });
+    });
+    el.querySelectorAll("[data-delacc]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = Number(b.dataset.delacc);
+        var acc = accs.filter(function (a) { return a.id === id; })[0];
+        if (!acc) return;
+        if (!confirm("アカウント「" + acc.name + "」を削除しますか？\n本人のいいね・保存・フォロー・グループ参加情報は削除されます（投稿は残ります）。元に戻せません。")) return;
+        deleteAccount(acc).then(function () {
+          alert("削除しました");
+          loadAll();
+        }).catch(function (e) {
+          alert("削除中にエラーが発生しました: " + e);
+          loadAll();
+        });
+      });
+    });
+  }
+
+  /* アカウント削除（投稿は残す。本人のいいね・保存・フォロー・グループ参加は削除） */
+  function deleteAccount(acc) {
+    var id = acc.id;
+    // 1) 投稿を残すため、先に投稿とアカウントの紐付けを外す
+    //    (DBの外部キーがcascade削除のため、外さないと投稿も一緒に消える)
+    return sb("PATCH", "posts?account_id=eq." + id, { account_id: null }).then(function () {
+      // 2) 本人のいいね・保存・フォロー・アバター・PW(savesのaccount_id行)を削除
+      return sb("DELETE", "saves?account_id=eq." + id);
+    }).then(function () {
+      // 3) 本人へのフォロー記録も削除
+      return sb("DELETE", "saves?save_id=eq.__follow__" + id);
+    }).then(function () {
+      // 4) 参加中のグループのメンバー/申請から除外(管理者のグループはアカウント削除時にcascadeで消える)
+      return sb("GET", "groups?select=*");
+    }).then(function (groups) {
+      var ops = [];
+      groups.forEach(function (g) {
+        if (Number(g.owner_id) === id) return; // cascadeに任せる
+        var m = (g.members || []).filter(function (x) { return Number(x) !== id; });
+        var pd = (g.pending || []).filter(function (x) { return Number(x) !== id; });
+        if (m.length !== (g.members || []).length || pd.length !== (g.pending || []).length) {
+          ops.push(sb("PATCH", "groups?id=eq." + g.id, { members: m, pending: pd }));
+        }
+      });
+      return Promise.all(ops);
+    }).then(function () {
+      // 5) アカウント本体を削除
+      return sb("DELETE", "accounts?id=eq." + id);
     });
   }
 
