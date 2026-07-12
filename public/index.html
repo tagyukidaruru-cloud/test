@@ -2353,7 +2353,7 @@ a { color: inherit; text-decoration: none; }
     <!-- プロフィール写真の切り取り調整 -->
     <div class="crop-modal" id="crop-modal" hidden>
       <div class="crop-sheet">
-        <div class="crop-title">切り取る範囲を調整 <span style="font-size:10px;color:var(--ink-3);">v9</span></div>
+        <div class="crop-title">切り取る範囲を調整</div>
         <div class="crop-viewport" id="crop-viewport">
           <img id="crop-img" alt="">
           <div class="crop-mask"></div>
@@ -3124,6 +3124,38 @@ a { color: inherit; text-decoration: none; }
     });
     return hit ? hit.bg : "";
   }
+  /* アバターのbg値(新=JSON{u,sz,ps} / 旧=切り抜き済みdataURL)からCSSスタイル文字列を作る。
+     新方式はcanvasを使わずbackground-position/sizeで切り抜きを再現(iOSのcanvas縮小バグ回避)。 */
+  function avatarStyle(bg) {
+    if (!bg) return "";
+    if (bg.charAt(0) === "{") {
+      try {
+        var o = JSON.parse(bg);
+        return "background-image:url(" + o.u + ");background-size:" + o.sz + ";background-position:" + o.ps + ";background-repeat:no-repeat;";
+      } catch (e) { return ""; }
+    }
+    return "background-image:url(" + bg + ");background-size:cover;background-position:center;";
+  }
+  function applyAvatar(el, bg) {
+    if (!el) return;
+    el.style.backgroundImage = "";
+    el.style.backgroundSize = "";
+    el.style.backgroundPosition = "";
+    if (!bg) return;
+    if (bg.charAt(0) === "{") {
+      try {
+        var o = JSON.parse(bg);
+        el.style.backgroundImage = "url(" + o.u + ")";
+        el.style.backgroundSize = o.sz;
+        el.style.backgroundPosition = o.ps;
+        el.style.backgroundRepeat = "no-repeat";
+        return;
+      } catch (e) {}
+    }
+    el.style.backgroundImage = "url(" + bg + ")";
+    el.style.backgroundSize = "cover";
+    el.style.backgroundPosition = "center";
+  }
 
   /* --- パスワード（SHA-256ハッシュをサーバーに保存） --- */
   function hashPw(pw, salt) {
@@ -3345,7 +3377,7 @@ a { color: inherit; text-decoration: none; }
         '<div class="case-meta">' + menuTags + '</div>' +
         (recipeLine ? '<div class="case-recipe">' + recipeLine + '</div>' : '') +
         '<div class="case-author">' +
-          '<div class="avatar"' + (avatarFor(post.accountId) ? ' style="background-image:url(' + avatarFor(post.accountId) + ');"' : '') + '></div>' +
+          '<div class="avatar"' + (avatarFor(post.accountId) ? ' style="' + avatarStyle(avatarFor(post.accountId)) + '"' : '') + '></div>' +
           '<span>' + esc(a.name || "名無し") + '</span>' +
         '</div>' +
       '</div>' +
@@ -3585,7 +3617,7 @@ a { color: inherit; text-decoration: none; }
     if (!acc || isAdminAcc(acc)) return; // 管理アカウントは他ユーザーから見えない
     var av = avatarFor(acc.id);
     var scr = document.querySelector('[data-screen="user"]');
-    scr.querySelector("#user-avatar").style.backgroundImage = av ? "url(" + av + ")" : "";
+    applyAvatar(scr.querySelector("#user-avatar"), av);
     scr.querySelector("#user-name").textContent = acc.name + (acc.role ? " @" + acc.role : "");
     scr.querySelector("#user-salon").textContent = acc.salon || "";
     scr.querySelector("#user-bio").textContent = acc.bio || "";
@@ -3634,7 +3666,7 @@ a { color: inherit; text-decoration: none; }
         '<div class="detail-label">プロフィール</div>' +
         '<div class="detail-author-row">' +
           '<div class="author-tap" id="detail-author" style="display:flex;align-items:center;gap:10px;flex:1;">' +
-            '<div class="avatar"' + (av ? ' style="background-image:url(' + av + ');"' : '') + '></div>' +
+            '<div class="avatar"' + (av ? ' style="' + avatarStyle(av) + '"' : '') + '></div>' +
             '<div class="name">' + esc(a.name || "") + '</div>' +
           '</div>' +
           (isOwn ? '' : '<button class="follow-btn' + (isFollowing(post.accountId) ? ' following' : '') + '" id="detail-follow">' + (isFollowing(post.accountId) ? "フォロー中" : "フォロー") + '</button>') +
@@ -3917,7 +3949,7 @@ a { color: inherit; text-decoration: none; }
     if (!p) return;
     var me = document.querySelector('[data-screen="me"]');
     var av = avatarFor(p.id);
-    me.querySelector(".p-avatar").style.backgroundImage = av ? "url(" + av + ")" : "";
+    applyAvatar(me.querySelector(".p-avatar"), av);
     me.querySelector(".p-name").textContent = p.name;
     var roleLine = [];
     if (p.role) roleLine.push("@" + p.role);
@@ -4390,7 +4422,7 @@ a { color: inherit; text-decoration: none; }
     var f = avatarInput.files[0];
     if (!f) return;
     avatarInput.value = "";
-    normalizeImageOrientation(f, 1200).then(openCropModal);
+    normalizeImageOrientation(f, 720).then(openCropModal);
   });
 
   function saveAvatar(data) {
@@ -4478,22 +4510,23 @@ a { color: inherit; text-decoration: none; }
   document.getElementById("crop-cancel").addEventListener("click", closeCropModal);
   document.getElementById("crop-ok").addEventListener("click", function () {
     if (!crop.img) return;
-    // ビューポートに見えている範囲を「元画像のピクセル座標」で計算し、
-    // drawImageに元・出力の両方のサイズを明示指定して描く。
-    // サイズ引数を省略しないので、Safari(dpr>1)での拡大描画バグを回避できる。
-    var out = 300;
+    // canvasで切り出さず、切り抜き範囲を「CSS background-size/position」として保存する。
+    // 表示側は元画像をbackgroundで同じ範囲に合わせるだけなので、
+    // iOS Safariのcanvas縮小描画バグの影響を一切受けず、プレビューと必ず一致する。
     var s = crop.scale;
-    var sx = -crop.x / s;                 // 見えている左端の元画像X
-    var sy = -crop.y / s;                 // 見えている上端の元画像Y
-    var sSize = crop.vp / s;              // 見えている正方形の元画像サイズ
+    var sx = -crop.x / s;              // 見えている左端の元画像X
+    var sy = -crop.y / s;              // 見えている上端の元画像Y
+    var sSize = crop.vp / s;           // 見えている正方形の元画像サイズ(px)
     var nw = crop.img.naturalWidth, nh = crop.img.naturalHeight;
-    // 正規化処理と同じ「5引数drawImage(画像全体をずらして拡大)」で切り出す。
-    // 9引数や変換付きdrawImageはSafari(dpr>1)で拡大描画バグを起こすため使わない。
-    var k = out / sSize; // 元画像→出力の倍率
-    var c = document.createElement("canvas");
-    c.width = out; c.height = out;
-    c.getContext("2d").drawImage(crop.img, -sx * k, -sy * k, nw * k, nh * k);
-    var data = c.toDataURL("image/jpeg", 0.85);
+    function clamp(v) { return Math.max(0, Math.min(100, v)); }
+    var szx = (nw / sSize * 100), szy = (nh / sSize * 100);
+    var psx = nw > sSize ? clamp(sx / (nw - sSize) * 100) : 50;
+    var psy = nh > sSize ? clamp(sy / (nh - sSize) * 100) : 50;
+    var data = JSON.stringify({
+      u: crop.url,
+      sz: szx.toFixed(2) + "% " + szy.toFixed(2) + "%",
+      ps: psx.toFixed(2) + "% " + psy.toFixed(2) + "%"
+    });
     closeCropModal();
     saveAvatar(data);
   });
