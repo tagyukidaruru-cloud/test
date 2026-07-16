@@ -12,6 +12,16 @@
       "port": 4173
     },
     {
+      "name": "proto",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-I",
+        "-c",
+        "import functools; from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer; handler = functools.partial(SimpleHTTPRequestHandler, directory='/Users/uuto/Downloads/test/new-folder'); ThreadingHTTPServer(('127.0.0.1', 4188), handler).serve_forever()"
+      ],
+      "port": 4188
+    },
+    {
       "name": "hp-preview",
       "runtimeExecutable": "python3",
       "runtimeArgs": [

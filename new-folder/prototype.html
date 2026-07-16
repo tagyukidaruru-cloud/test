@@ -2114,15 +2114,15 @@ a { color: inherit; text-decoration: none; }
                 <textarea style="min-height:120px;" placeholder="工夫した点や仕上げ方法など"></textarea>
               </div>
               <div class="field">
-                <label>公開範囲</label>
+                <label>公開範囲（全体とグループは同時に選べます）</label>
                 <div class="damage-slider" id="f-visibility">
-                  <div class="dmg selected">全体公開</div>
-                  <div class="dmg">グループ公開</div>
-                  <div class="dmg">下書き</div>
+                  <div class="dmg selected" data-vis="public">全体公開</div>
+                  <div class="dmg" data-vis="group">グループに共有</div>
+                  <div class="dmg" data-vis="draft">下書き</div>
                 </div>
               </div>
               <div class="field" id="f-group-row" hidden>
-                <label>公開先グループ</label>
+                <label>共有先グループ</label>
                 <div class="check-list" id="f-group-list"></div>
               </div>
             </div>
@@ -2883,7 +2883,7 @@ a { color: inherit; text-decoration: none; }
   /* ================================================================
      ダメージレベル選択
      ================================================================ */
-  document.querySelectorAll(".damage-slider").forEach(function (grp) {
+  document.querySelectorAll(".damage-slider:not(#f-visibility)").forEach(function (grp) {
     grp.querySelectorAll(".dmg").forEach(function (d) {
       d.addEventListener("click", function () {
         grp.querySelectorAll(".dmg").forEach(function (x) { x.classList.remove("selected"); });
@@ -2929,7 +2929,7 @@ a { color: inherit; text-decoration: none; }
   });
 
   /* ダメージレベル等のセグメント選択 */
-  document.querySelectorAll(".damage-slider").forEach(function (grp) {
+  document.querySelectorAll(".damage-slider:not(#f-visibility)").forEach(function (grp) {
     grp.querySelectorAll(".dmg").forEach(function (d) {
       d.addEventListener("click", function () {
         grp.querySelectorAll(".dmg").forEach(function (x) { x.classList.remove("selected"); });
@@ -3331,9 +3331,9 @@ a { color: inherit; text-decoration: none; }
     document.querySelectorAll('[data-screen="new"] .check-list label').forEach(function (l) {
       l.classList.remove("on");
     });
-    // 公開範囲は全体公開に戻す
-    document.querySelectorAll("#f-visibility .dmg").forEach(function (d, i) {
-      d.classList.toggle("selected", i === 0);
+    // 公開範囲は全体公開のみに戻す
+    document.querySelectorAll("#f-visibility .dmg").forEach(function (d) {
+      d.classList.toggle("selected", d.dataset.vis === "public");
     });
     var row = document.getElementById("f-group-row");
     if (row) row.hidden = true;
@@ -3360,7 +3360,7 @@ a { color: inherit; text-decoration: none; }
     var menuTags = (post.menu || []).map(function (m) {
       return '<span class="tag">' + esc(m) + '</span>';
     }).join("");
-    if (post.visibility === "group") menuTags += '<span class="tag accent">グループ</span>';
+    if (post.groupId != null && post.visibility !== "draft") menuTags += '<span class="tag accent">グループ</span>';
     if (post.visibility === "draft") menuTags += '<span class="tag accent">下書き</span>';
     card.innerHTML =
       '<div class="before-after">' +
@@ -3539,11 +3539,14 @@ a { color: inherit; text-decoration: none; }
     checkLabels("f-color", post.color);
     checkLabels("f-straight", post.straight);
     updateMenuDeps();
-    // 公開範囲の復元
-    var visLabel = post.visibility === "group" ? "グループ公開"
-      : post.visibility === "draft" ? "下書き" : "全体公開";
+    // 公開範囲の復元（全体公開＋グループ共有の併用に対応）
+    var setVis = {
+      draft: post.visibility === "draft",
+      public: post.visibility === "public",
+      group: post.visibility !== "draft" && post.groupId != null
+    };
     document.querySelectorAll("#f-visibility .dmg").forEach(function (d) {
-      d.classList.toggle("selected", d.textContent.trim() === visLabel);
+      d.classList.toggle("selected", !!setVis[d.dataset.vis]);
     });
     renderGroupPicker(post.groupId);
     formStep = 1;
@@ -3882,7 +3885,7 @@ a { color: inherit; text-decoration: none; }
       thumb = '<div class="g-thumb"' + (img ? ' style="background-image:url(' + img + ');"' : '') + '></div>';
     }
     var badges = "";
-    if (post.visibility === "group") badges += '<span class="g-badge">グループ</span>';
+    if (post.groupId != null && post.visibility !== "draft") badges += '<span class="g-badge">グループ</span>';
     if (post.visibility === "draft") badges += '<span class="g-badge">下書き</span>';
     b.innerHTML =
       thumb +
@@ -3990,10 +3993,10 @@ a { color: inherit; text-decoration: none; }
     }
     var visibility = selectedVisibility();
     var groupId = null;
-    if (visibility === "group") {
+    if (visibility !== "draft" && visSel("group")) {
       var gsel = document.querySelector("#f-group-list label.on");
       if (!gsel) {
-        showToast("公開先グループを選択してください");
+        showToast("共有先グループを選択してください");
         return;
       }
       groupId = gsel.dataset.gid;
@@ -4047,16 +4050,21 @@ a { color: inherit; text-decoration: none; }
   }
 
   /* --- 公開範囲とグループ選択 --- */
+  function visSel(v) {
+    return !!document.querySelector('#f-visibility .dmg.selected[data-vis="' + v + '"]');
+  }
+  // 保存するvisibility: 下書き最優先、全体公開を含めばpublic、それ以外はgroup
   function selectedVisibility() {
-    var el = document.querySelector("#f-visibility .dmg.selected");
-    var t = el ? el.textContent.trim() : "全体公開";
-    return t === "グループ公開" ? "group" : (t === "下書き" ? "draft" : "public");
+    if (visSel("draft")) return "draft";
+    if (visSel("public")) return "public";
+    if (visSel("group")) return "group";
+    return "public";
   }
 
   function renderGroupPicker(selectedId) {
     var row = document.getElementById("f-group-row");
     var listEl = document.getElementById("f-group-list");
-    row.hidden = selectedVisibility() !== "group";
+    row.hidden = !visSel("group");
     if (row.hidden) return;
     var gs = myGroups();
     listEl.innerHTML = "";
@@ -4079,8 +4087,28 @@ a { color: inherit; text-decoration: none; }
     });
   }
 
-  document.getElementById("f-visibility").addEventListener("click", function () {
-    setTimeout(function () { renderGroupPicker(); }, 0);
+  /* 公開範囲: 全体公開とグループ共有は併用可、下書きは単独 */
+  document.querySelectorAll("#f-visibility .dmg").forEach(function (d) {
+    d.addEventListener("click", function () {
+      var v = d.dataset.vis;
+      if (v === "draft") {
+        // 下書きは排他。選び直しは可、必ず1つは残す
+        document.querySelectorAll("#f-visibility .dmg").forEach(function (x) {
+          x.classList.toggle("selected", x === d);
+        });
+      } else {
+        // 下書きが選ばれていたら解除して全体/グループ側へ
+        var draftEl = document.querySelector('#f-visibility .dmg[data-vis="draft"]');
+        if (draftEl) draftEl.classList.remove("selected");
+        d.classList.toggle("selected");
+        // 全体もグループも外れたら全体公開に戻す（0選択を防ぐ）
+        if (!document.querySelector('#f-visibility .dmg[data-vis="public"].selected') &&
+            !document.querySelector('#f-visibility .dmg[data-vis="group"].selected')) {
+          d.classList.add("selected");
+        }
+      }
+      renderGroupPicker();
+    });
   });
 
   /* --- ステップ3の項目をステップ2のメニュー選択に連動 --- */
@@ -4105,7 +4133,8 @@ a { color: inherit; text-decoration: none; }
      ================================================================ */
   function groupPosts(g) {
     return loadPosts().filter(function (p) {
-      return p.visibility === "group" && String(p.groupId) === String(g.id);
+      // 全体公開＋グループ共有も含めるため、下書き以外でgroupId一致なら表示
+      return p.visibility !== "draft" && String(p.groupId) === String(g.id);
     });
   }
 
