@@ -3003,6 +3003,70 @@ a { color: inherit; text-decoration: none; }
     showToast("通信エラー: 保存できませんでした");
   }
 
+  /* --- Supabase Storage（画像はStorageに置きDBにはURLだけ保存してEgressを節約） --- */
+  var STORAGE_BUCKET = "post-images";
+  function storagePublicUrl(path) {
+    return SUPABASE_URL + "/storage/v1/object/public/" + STORAGE_BUCKET + "/" + path;
+  }
+  // キーは毎回ユニーク化するため上書き(upsert)は使わない → Storageポリシーは匿名INSERTのみで済む
+  function storageUpload(path, blob) {
+    return fetch(SUPABASE_URL + "/storage/v1/object/" + STORAGE_BUCKET + "/" + path, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: "Bearer " + SUPABASE_KEY,
+        "Content-Type": blob.type || "image/jpeg"
+      },
+      body: blob
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error("storage " + r.status + " " + t); });
+      return storagePublicUrl(path);
+    });
+  }
+  function dataUrlToBlob(d) {
+    var i = d.indexOf(","), head = d.slice(0, i), b = atob(d.slice(i + 1));
+    var mime = (head.match(/:(.*?);/) || [])[1] || "image/jpeg";
+    var arr = new Uint8Array(b.length);
+    for (var k = 0; k < b.length; k++) arr[k] = b.charCodeAt(k);
+    return new Blob([arr], { type: mime });
+  }
+  function shrinkDataUrl(d, max, q) {
+    return new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () {
+        var sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.max(1, Math.round(img.naturalWidth * sc));
+        var h = Math.max(1, Math.round(img.naturalHeight * sc));
+        var c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", q || 0.72));
+      };
+      img.onerror = function () { resolve(d); };
+      img.src = d;
+    });
+  }
+  // 新規のdata URLならStorageへ上げ「原寸URL(素の文字列)」を返す。サムネは同名+_tで別途保存(best-effort)。
+  // 素URLにすることで、旧コードのフロントでも url(before) がそのまま表示でき表示崩れしない。
+  function uploadImageField(v, keyBase) {
+    if (!v || v.slice(0, 5) !== "data:") return Promise.resolve(v || null);
+    return storageUpload(keyBase + ".jpg", dataUrlToBlob(v)).then(function (fu) {
+      return shrinkDataUrl(v, 400, 0.72)
+        .then(function (thumbData) { return storageUpload(keyBase + "_t.jpg", dataUrlToBlob(thumbData)); })
+        .then(function () { return fu; })
+        .catch(function () { return fu; }); // サムネ失敗でも原寸URLは返す
+    });
+  }
+  // 保存値から表示URLを取り出す。which="t"(一覧サムネ)/"f"(詳細原寸)。
+  // Storageの.jpgなら "t" のとき _t.jpg サムネURLを導出。旧data:や非Storage URLはそのまま。
+  function imgVariant(v, which) {
+    if (!v) return "";
+    if (v.slice(0, 5) === "data:") return v;
+    if (which === "t" && v.indexOf("/post-images/") >= 0 && /\.jpg$/.test(v)) {
+      return v.replace(/\.jpg$/, "_t.jpg");
+    }
+    return v;
+  }
+
   /* --- 行 ⇔ アプリ内オブジェクトの変換 --- */
   function postFromRow(r) {
     return {
@@ -3364,8 +3428,8 @@ a { color: inherit; text-decoration: none; }
     if (post.visibility === "draft") menuTags += '<span class="tag accent">下書き</span>';
     card.innerHTML =
       '<div class="before-after">' +
-        side(post.before, "BEFORE", "gray") +
-        side(post.after, "AFTER", "ash") +
+        side(imgVariant(post.before, "f"), "BEFORE", "gray") +
+        side(imgVariant(post.after, "f"), "AFTER", "ash") +
         '<div class="divider"></div>' +
       '</div>' +
       '<div class="case-body">' +
@@ -3528,8 +3592,8 @@ a { color: inherit; text-decoration: none; }
     editingPost = post.ts;
     photoBefore = post.before || null;
     photoAfter = post.after || null;
-    setUploaderPreview("up-before", post.before);
-    setUploaderPreview("up-after", post.after);
+    setUploaderPreview("up-before", imgVariant(post.before, "f"));
+    setUploaderPreview("up-after", imgVariant(post.after, "f"));
     document.getElementById("f-title").value = post.title || "";
     document.getElementById("f-recipe").value = post.recipe || "";
     document.getElementById("f-note").value = post.note || "";
@@ -3656,8 +3720,8 @@ a { color: inherit; text-decoration: none; }
     detailTitleH.textContent = "施術詳細";
     detailBody.innerHTML =
       '<div class="detail-photos">' +
-        photoSide(post.before, "BEFORE", "gray") +
-        photoSide(post.after, "AFTER", "ash") +
+        photoSide(imgVariant(post.before, "f"), "BEFORE", "gray") +
+        photoSide(imgVariant(post.after, "f"), "AFTER", "ash") +
         '<div class="divider"></div>' +
       '</div>' +
       '<div class="detail-body">' +
@@ -3874,14 +3938,15 @@ a { color: inherit; text-decoration: none; }
     var b = document.createElement("button");
     b.className = "grid-tile";
     var thumb;
-    if (post.before && post.after) {
+    var tb = imgVariant(post.before, "t"), ta = imgVariant(post.after, "t");
+    if (tb && ta) {
       // before/after 左右2分割
       thumb = '<div class="g-thumb split">' +
-        '<div style="background-image:url(' + post.before + ');"></div>' +
-        '<div style="background-image:url(' + post.after + ');"></div>' +
+        '<div style="background-image:url(' + tb + ');"></div>' +
+        '<div style="background-image:url(' + ta + ');"></div>' +
       '</div>';
     } else {
-      var img = post.after || post.before;
+      var img = ta || tb;
       thumb = '<div class="g-thumb"' + (img ? ' style="background-image:url(' + img + ');"' : '') + '></div>';
     }
     var badges = "";
@@ -4001,52 +4066,65 @@ a { color: inherit; text-decoration: none; }
       }
       groupId = gsel.dataset.gid;
     }
-    var fields = {
-      title: title,
-      menu: menuSel,
-      cut: checkedLabels("f-cut"),
-      color: checkedLabels("f-color"),
-      straight: checkedLabels("f-straight"),
-      perm: (document.getElementById("f-perm").value || "").trim(),
-      note: document.getElementById("f-note").value,
-      recipe: document.getElementById("f-recipe").value,
-      before: photoBefore,
-      after: photoAfter,
-      visibility: visibility,
-      groupId: groupId
-    };
+    var pid = editingPost || Date.now();
+    var keyBase = "posts/" + cur.id + "/" + pid + "-" + Date.now(); // 毎回ユニーク(上書き不要)
+    var needUpload = (photoBefore && photoBefore.slice(0, 5) === "data:") ||
+                     (photoAfter && photoAfter.slice(0, 5) === "data:");
+    if (needUpload) showToast("画像を保存中…");
+    Promise.all([
+      uploadImageField(photoBefore, keyBase + "_b"),
+      uploadImageField(photoAfter, keyBase + "_a")
+    ]).then(function (imgs) {
+      var fields = {
+        title: title,
+        menu: menuSel,
+        cut: checkedLabels("f-cut"),
+        color: checkedLabels("f-color"),
+        straight: checkedLabels("f-straight"),
+        perm: (document.getElementById("f-perm").value || "").trim(),
+        note: document.getElementById("f-note").value,
+        recipe: document.getElementById("f-recipe").value,
+        before: imgs[0],
+        after: imgs[1],
+        visibility: visibility,
+        groupId: groupId
+      };
 
-    var wasEditing = !!editingPost;
-    if (wasEditing) {
-      var target = null;
-      DB.posts.forEach(function (p) {
-        if (p.ts === editingPost) {
-          Object.keys(fields).forEach(function (k) { p[k] = fields[k]; });
-          target = p;
-        }
-      });
-      if (target) apiUpdatePost(target);
-    } else {
-      fields.ts = Date.now();
-      fields.accountId = cur.id;
-      fields.author = { name: cur.name, salon: cur.salon };
-      DB.posts.unshift(fields);
-      apiInsertPost(fields);
-    }
-    renderHomePosts();
-    renderMyPosts();
-    renderProfile();
-    renderFavs();
-    renderGroups();
-    updateSearchBadge();
-    resetPostForm();
-    showToast(
-      visibility === "draft" ? "下書きに保存しました ✓"
-        : wasEditing ? "投稿を更新しました ✓" : "投稿しました ✓"
-    );
-    formStep = 1;
-    renderStep();
-    setTimeout(function () { navigate("home"); }, 900);
+      var wasEditing = !!editingPost;
+      if (wasEditing) {
+        var target = null;
+        DB.posts.forEach(function (p) {
+          if (p.ts === editingPost) {
+            Object.keys(fields).forEach(function (k) { p[k] = fields[k]; });
+            target = p;
+          }
+        });
+        if (target) apiUpdatePost(target);
+      } else {
+        fields.ts = pid;
+        fields.accountId = cur.id;
+        fields.author = { name: cur.name, salon: cur.salon };
+        DB.posts.unshift(fields);
+        apiInsertPost(fields);
+      }
+      renderHomePosts();
+      renderMyPosts();
+      renderProfile();
+      renderFavs();
+      renderGroups();
+      updateSearchBadge();
+      resetPostForm();
+      showToast(
+        visibility === "draft" ? "下書きに保存しました ✓"
+          : wasEditing ? "投稿を更新しました ✓" : "投稿しました ✓"
+      );
+      formStep = 1;
+      renderStep();
+      setTimeout(function () { navigate("home"); }, 900);
+    }).catch(function (e) {
+      console.error(e);
+      showToast("画像のアップロードに失敗しました");
+    });
   }
 
   /* --- 公開範囲とグループ選択 --- */
@@ -4453,14 +4531,31 @@ a { color: inherit; text-decoration: none; }
   function saveAvatar(data) {
     var cur = currentAccount();
     if (!cur) return;
-    DB.saves = DB.saves.filter(function (s) { return !(s.id === "__avatar__" && s.accountId === cur.id); });
-    var entry = { accountId: cur.id, id: "__avatar__", title: "", author: "", bg: data };
-    DB.saves.push(entry);
-    pendingAvatar = { accountId: cur.id, bg: data };
-    apiAddSave(entry);
-    renderProfile();
-    renderHomePosts();
-    showToast("プロフィール写真を設定しました ✓");
+    function persist(finalData) {
+      DB.saves = DB.saves.filter(function (s) { return !(s.id === "__avatar__" && s.accountId === cur.id); });
+      var entry = { accountId: cur.id, id: "__avatar__", title: "", author: "", bg: finalData };
+      DB.saves.push(entry);
+      pendingAvatar = { accountId: cur.id, bg: finalData };
+      apiAddSave(entry);
+      renderProfile();
+      renderHomePosts();
+      showToast("プロフィール写真を設定しました ✓");
+    }
+    // {u,sz,ps} の u が data URL ならStorageへ上げてURLに差し替え（Egress節約）
+    var o = null;
+    try { o = JSON.parse(data); } catch (e) {}
+    if (o && typeof o.u === "string" && o.u.slice(0, 5) === "data:") {
+      showToast("写真を保存中…");
+      storageUpload("avatars/" + cur.id + "-" + Date.now() + ".jpg", dataUrlToBlob(o.u)).then(function (url) {
+        o.u = url;
+        persist(JSON.stringify(o));
+      }).catch(function (e) {
+        console.error(e);
+        showToast("写真のアップロードに失敗しました");
+      });
+    } else {
+      persist(data);
+    }
   }
 
   /* --- 切り取り調整モーダル（ドラッグで位置・スライダーで拡大） --- */

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STYLE ARCHIVE 画像移行ツール (base64 → Supabase Storage)</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 760px; margin: 24px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 18px; }
+  .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+  button { font-size: 15px; padding: 10px 18px; border-radius: 8px; border: 0; cursor: pointer; margin-right: 8px; }
+  .dry { background: #eef; }
+  .run { background: #d33; color: #fff; }
+  pre { background: #111; color: #6f6; padding: 12px; border-radius: 8px; overflow: auto; max-height: 46vh; font-size: 12px; white-space: pre-wrap; }
+  .warn { color: #b00; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>画像移行ツール — DB内の base64 画像を Supabase Storage へ退避</h1>
+<div class="card">
+  <p>投稿の <code>before_img / after_img</code> と アバター <code>saves.bg</code> の <code>data:</code> 実体を Storage にアップロードし、DBには URL(JSON)だけを残します。<b>Egress を根本的に減らすための一度きりの移行です。</b></p>
+  <p class="warn">前提: Supabase側で公開バケット <code>post-images</code> と匿名INSERT/UPDATEポリシーを作成済みであること（SETUP.md 参照）。実行前にDBバックアップ推奨。</p>
+</div>
+<div class="card">
+  <button class="dry" id="dry">① ドライラン（読み取りのみ・件数と転送量を集計）</button>
+  <button class="run" id="run">② 実行（アップロード＋DB書き換え）</button>
+</div>
+<pre id="log">準備完了。まず「ドライラン」を押してください。</pre>
+
+<script>
+(function () {
+  "use strict";
+  var SUPABASE_URL = "https://xwzjrcarawlrcgvynlgh.supabase.co";
+  var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3empyY2FyYXdscmNndnlubGdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5OTk1MzQsImV4cCI6MjA5ODU3NTUzNH0.gtHHd0W3KOA02vJO11iZvidaO5-IILYIau_vp77v37E";
+  var BUCKET = "post-images";
+  var H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY };
+
+  var logEl = document.getElementById("log");
+  function log(m) { logEl.textContent += "\n" + m; logEl.scrollTop = logEl.scrollHeight; }
+  function isData(v) { return typeof v === "string" && v.slice(0, 5) === "data:"; }
+  function bytesOf(dataUrl) { var i = dataUrl.indexOf(","); return Math.floor((dataUrl.length - i - 1) * 0.75); }
+  function fmt(n) { return (n / 1048576).toFixed(2) + " MB"; }
+
+  function getJSON(path) {
+    return fetch(SUPABASE_URL + "/rest/v1/" + path, { headers: H }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error("GET " + path + " " + r.status + " " + t); });
+      return r.json();
+    });
+  }
+  function patch(path, body) {
+    return fetch(SUPABASE_URL + "/rest/v1/" + path, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json", Prefer: "return=minimal" }, H),
+      body: JSON.stringify(body)
+    }).then(function (r) { if (!r.ok) return r.text().then(function (t) { throw new Error("PATCH " + path + " " + r.status + " " + t); }); });
+  }
+  function dataUrlToBlob(d) {
+    var i = d.indexOf(","), head = d.slice(0, i), b = atob(d.slice(i + 1));
+    var mime = (head.match(/:(.*?);/) || [])[1] || "image/jpeg";
+    var arr = new Uint8Array(b.length);
+    for (var k = 0; k < b.length; k++) arr[k] = b.charCodeAt(k);
+    return new Blob([arr], { type: mime });
+  }
+  function shrink(d, max, q) {
+    return new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () {
+        var sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
+        var c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", q || 0.72));
+      };
+      img.onerror = function () { resolve(d); };
+      img.src = d;
+    });
+  }
+  // キーは毎回ユニーク(nonce付き)なので上書き不要 → 匿名INSERTのみのポリシーで動く
+  function upload(path, blob) {
+    return fetch(SUPABASE_URL + "/storage/v1/object/" + BUCKET + "/" + path, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": blob.type || "image/jpeg" }, H),
+      body: blob
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error("UPLOAD " + path + " " + r.status + " " + t); });
+      return SUPABASE_URL + "/storage/v1/object/public/" + BUCKET + "/" + path;
+    });
+  }
+  // data URL を full+thumb でアップロードし {f,t} を返す
+  function migrateImage(dataUrl, keyBase) {
+    return shrink(dataUrl, 400, 0.72).then(function (thumb) {
+      return upload(keyBase + ".jpg", dataUrlToBlob(dataUrl)).then(function (fu) {
+        return upload(keyBase + "_t.jpg", dataUrlToBlob(thumb)).then(function (tu) {
+          return JSON.stringify({ f: fu, t: tu });
+        });
+      });
+    });
+  }
+
+  function scan() {
+    return Promise.all([
+      getJSON("posts?select=ts,before_img,after_img"),
+      getJSON("saves?id=eq.__avatar__&select=account_id,bg")
+    ]);
+  }
+
+  document.getElementById("dry").onclick = function () {
+    logEl.textContent = "ドライラン中…";
+    scan().then(function (res) {
+      var posts = res[0], avatars = res[1];
+      var n = 0, bytes = 0;
+      posts.forEach(function (p) {
+        ["before_img", "after_img"].forEach(function (f) {
+          if (isData(p[f])) { n++; bytes += bytesOf(p[f]); }
+        });
+      });
+      var an = 0, ab = 0;
+      avatars.forEach(function (a) {
+        var o = null; try { o = JSON.parse(a.bg); } catch (e) {}
+        if (o && isData(o.u)) { an++; ab += bytesOf(o.u); }
+      });
+      log("投稿レコード数: " + posts.length);
+      log("移行対象の投稿画像(base64): " + n + " 枚 / " + fmt(bytes));
+      log("移行対象のアバター(base64): " + an + " 枚 / " + fmt(ab));
+      log("合計 DB内 base64: " + fmt(bytes + ab));
+      log("→ これらが「一覧を開くたびに」転送されているのが Egress 超過の主因です。");
+      log("\n問題なければ「実行」を押してください（アップロード＋DB書き換え）。");
+    }).catch(function (e) { log("エラー: " + e.message); });
+  };
+
+  document.getElementById("run").onclick = function () {
+    if (!confirm("実行するとStorageへアップロードし、DBの画像フィールドをURLに書き換えます。よろしいですか？")) return;
+    logEl.textContent = "実行中…（ネットワーク状況により時間がかかります）";
+    scan().then(function (res) {
+      var posts = res[0], avatars = res[1];
+      var queue = [];
+      posts.forEach(function (p) {
+        if (isData(p.before_img) || isData(p.after_img)) {
+          queue.push(function () {
+            var patchBody = {};
+            var chain = Promise.resolve();
+            var nonce = Date.now();
+            if (isData(p.before_img)) chain = chain.then(function () { return migrateImage(p.before_img, "migrated/" + p.ts + "-" + nonce + "_b").then(function (j) { patchBody.before_img = j; }); });
+            if (isData(p.after_img)) chain = chain.then(function () { return migrateImage(p.after_img, "migrated/" + p.ts + "-" + nonce + "_a").then(function (j) { patchBody.after_img = j; }); });
+            return chain.then(function () { return patch("posts?ts=eq." + p.ts, patchBody); })
+              .then(function () { log("投稿 ts=" + p.ts + " ✓ " + Object.keys(patchBody).join(",")); });
+          });
+        }
+      });
+      avatars.forEach(function (a) {
+        var o = null; try { o = JSON.parse(a.bg); } catch (e) {}
+        if (o && isData(o.u)) {
+          queue.push(function () {
+            return upload("avatars/" + a.account_id + "-" + Date.now() + ".jpg", dataUrlToBlob(o.u)).then(function (url) {
+              o.u = url;
+              return patch("saves?id=eq.__avatar__&account_id=eq." + a.account_id, { bg: JSON.stringify(o) });
+            }).then(function () { log("アバター account=" + a.account_id + " ✓"); });
+          });
+        }
+      });
+      log("処理対象: " + queue.length + " 件。順次実行します…");
+      var i = 0;
+      function next() {
+        if (i >= queue.length) { log("\n✅ 移行完了（" + queue.length + " 件）。アプリを再読み込みして表示を確認してください。"); return; }
+        queue[i++]().then(next).catch(function (e) { log("⚠ 失敗: " + e.message + " → 続行"); next(); });
+      }
+      next();
+    }).catch(function (e) { log("エラー: " + e.message); });
+  };
+})();
+</script>
+</body>
+</html>
