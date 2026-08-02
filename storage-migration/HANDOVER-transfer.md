@@ -1,5 +1,27 @@
 # リポジトリ移管 申し送り一覧（tagyukidaruru-cloud/test → lunard-jp/style-archive）
 
+---
+## ✅ ストレージ移行 完了記録（2026-08-01 実行・本番検証済み）
+CEO明示GO（8/4予定を前倒し）で 手順0〜3＋実測 を完了。
+
+**実測値（Egress対策の効果）**
+- 一覧クエリ posts payload: **3,022,182 bytes → 2,195 bytes（約99.9%減）**
+- DBから除去した base64 実体: 2.16 MB / 移行画像 15枚・8投稿・エラー0
+- 画像配信: 原寸URL 200 image/jpeg（例117KB）／導出サムネ `_t.jpg` 200 image/jpeg（例15.7KB）＝Storage CDN
+- ライブ(GitHub Pages)実サイト: 新コード反映済み、ホーム全タイルが Storage サムネから描画、base64=0
+- データ欠損: なし（posts8/accounts5/saves12/groups2＝バックアップと一致。移行は before_img/after_img のみ変更）
+- バックアップ: `/Users/uuto/Desktop/style-archive-backup-20260801/`（全4テーブル・リポジトリ外）
+
+**残課題**
+1. **Netlify(公開用/)は旧コードのまま**（クレジット枯渇で再デプロイ不可）。素URL方式なので表示は崩れないが、旧コードは一覧で原寸を読む（サムネ最適化が効かない）。→ 配信一本化（Pages）で解消。
+2. **数日 Egress を監視**し 8/7 枠内を確認（移行前191%との比較）。
+3. 検証用テスト画像 `post-images/verify/test-*.png`（69B×1）が残存（匿名DELETE不可の設計上、消すならダッシュボード）。
+4. その後の Pages一本化＋lunard-jp移管（本書の本題・秘書gh実務）。
+5. gh認証は当面 tagyukidaruru-cloud（移管実務でも使用）。
+
+---
+
+
 対象: GitHub Pages 一本化＋lunard-jp へ移管（想定URL `https://lunard-jp.github.io/style-archive/`）
 **前提の実行順序（厳守）**: Egress対応（バケット作成→移行→デプロイ→実測報告）が完了してから、この移管に着手する。移管の gh 実務は秘書が担当。
 
